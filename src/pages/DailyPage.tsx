@@ -1,9 +1,11 @@
 import { useState, useEffect, useCallback } from 'react';
 import { ChevronLeft, ChevronRight, Pencil, Trash2, Plus } from 'lucide-react';
-import { getPunchesByDate, deletePunch, updatePunch, addPunch, calculateWorkedMinutes, formatMinutes, generateId, type Punch } from '@/hooks/useDB';
+import { getPunchesByDate, deletePunch, updatePunch, addPunch, calculateWorkedMinutes, formatMinutes, type Punch } from '@/hooks/useDB';
 import { useSettings } from '@/hooks/useDB';
+import { useAuth } from '@/contexts/AuthContext';
 
 export default function DailyPage() {
+  const { user } = useAuth();
   const [date, setDate] = useState(() => new Date().toISOString().split('T')[0]);
   const [punches, setPunches] = useState<Punch[]>([]);
   const { settings } = useSettings();
@@ -14,9 +16,10 @@ export default function DailyPage() {
   const [addType, setAddType] = useState<'in' | 'out'>('in');
 
   const load = useCallback(async () => {
-    const p = await getPunchesByDate(date);
+    if (!user) return;
+    const p = await getPunchesByDate(user.id, date);
     setPunches(p);
-  }, [date]);
+  }, [date, user]);
 
   useEffect(() => { load(); }, [load]);
 
@@ -47,7 +50,7 @@ export default function DailyPage() {
       const [h, m] = editTime.split(':').map(Number);
       const d = new Date(p.timestamp);
       d.setHours(h, m, 0, 0);
-      await updatePunch({ ...p, timestamp: d.getTime() });
+      await updatePunch(p.id, d.getTime());
       setEditingId(null);
       await load();
     } else {
@@ -57,12 +60,11 @@ export default function DailyPage() {
   };
 
   const handleAdd = async () => {
-    if (!addTime) return;
+    if (!addTime || !user) return;
     const [h, m] = addTime.split(':').map(Number);
     const d = new Date(date + 'T12:00:00');
     d.setHours(h, m, 0, 0);
-    await addPunch({
-      id: generateId(),
+    await addPunch(user.id, {
       timestamp: d.getTime(),
       type: addType,
       date,
