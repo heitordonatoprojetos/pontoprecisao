@@ -1,0 +1,56 @@
+name: Android APK
+
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - '**'
+  pull_request:
+
+jobs:
+  build-apk:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+
+      - name: Setup Java
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '21'
+
+      - name: Install dependencies (lockfile tolerant)
+        run: npm install
+
+      - name: Ensure Vite is installed
+        run: npm install --save-dev vite@^5.4.19
+
+      - name: Build web app
+        run: npm run build
+
+      - name: Ensure Capacitor packages
+        run: npm install --save-dev @capacitor/cli@^7.6.1 @capacitor/android@^7.6.1 && npm install @capacitor/core@^7.6.1 @capacitor/local-notifications@^7.0.6
+
+      - name: Prepare Android project
+        run: |
+          if [ ! -d android ]; then
+            npx cap add android
+          fi
+          npx cap sync android
+
+      - name: Build debug APK
+        run: cd android && ./gradlew assembleDebug
+
+      - name: Upload APK artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: app-debug
+          path: android/app/build/outputs/apk/debug/app-debug.apk

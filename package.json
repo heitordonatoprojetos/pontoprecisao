@@ -4,15 +4,19 @@
   "version": "0.0.0",
   "type": "module",
   "scripts": {
-    "dev": "vite",
+    "android:sync": "npx cap sync android",
     "build": "vite build",
+    "build:apk": "npm run build && npm run android:sync && cd android && ./gradlew assembleDebug",
     "build:dev": "vite build --mode development",
+    "dev": "vite",
     "lint": "eslint .",
     "preview": "vite preview",
     "test": "vitest run",
     "test:watch": "vitest"
   },
   "dependencies": {
+    "@capacitor/core": "^7.4.3",
+    "@capacitor/local-notifications": "^7.0.4",
     "@hookform/resolvers": "^3.10.0",
     "@radix-ui/react-accordion": "^1.2.11",
     "@radix-ui/react-alert-dialog": "^1.1.14",
@@ -67,6 +71,8 @@
     "zod": "^3.25.76"
   },
   "devDependencies": {
+    "@capacitor/android": "^7.4.3",
+    "@capacitor/cli": "^7.4.3",
     "@eslint/js": "^9.32.0",
     "@tailwindcss/typography": "^0.5.16",
     "@testing-library/jest-dom": "^6.6.0",
