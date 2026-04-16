@@ -1,16 +1,23 @@
-import { useState, useEffect } from 'react';
-import { Save, Plus, Trash2, Clock } from 'lucide-react';
+import { useState } from 'react';
+import { Save, Plus, Trash2, Clock, LogOut } from 'lucide-react';
 import { useSettings } from '@/hooks/useDB';
-import type { AppSettings } from '@/lib/db';
+import { useAuth } from '@/contexts/AuthContext';
+import type { AppSettings } from '@/hooks/useDB';
 
 const WEEKDAYS = ['Dom', 'Seg', 'Ter', 'Qua', 'Qui', 'Sex', 'Sáb'];
 
 export default function SettingsPage() {
   const { settings, update, loading } = useSettings();
+  const { signOut, user } = useAuth();
   const [local, setLocal] = useState<AppSettings>(settings);
   const [saved, setSaved] = useState(false);
 
-  useEffect(() => { if (!loading) setLocal(settings); }, [settings, loading]);
+  // sync local state when settings load
+  const [synced, setSynced] = useState(false);
+  if (!loading && !synced) {
+    setLocal(settings);
+    setSynced(true);
+  }
 
   const setDailyHours = (h: number, m: number) => {
     setLocal(s => ({ ...s, dailyHours: h * 60 + m }));
@@ -103,10 +110,18 @@ export default function SettingsPage() {
       </section>
 
       {/* Save */}
-      <button onClick={handleSave} className="flex w-full items-center justify-center gap-2 rounded-xl bg-primary py-3 text-sm font-semibold text-primary-foreground">
+      <button onClick={handleSave} className="flex w-full items-center justify-center gap-2 rounded-xl bg-primary py-3 text-sm font-semibold text-primary-foreground mb-4">
         <Save className="h-4 w-4" />
         {saved ? 'Salvo!' : 'Salvar Configurações'}
       </button>
+
+      {/* Account */}
+      <section className="rounded-xl bg-card border border-border p-4">
+        <p className="text-xs text-muted-foreground mb-2">Conta: {user?.email}</p>
+        <button onClick={signOut} className="flex items-center gap-2 text-sm text-destructive font-medium">
+          <LogOut className="h-4 w-4" /> Sair
+        </button>
+      </section>
     </div>
   );
 }
