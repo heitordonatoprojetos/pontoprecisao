@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo } from 'react';
+import { useState, useMemo } from 'react';
 import { ChevronLeft, ChevronRight } from 'lucide-react';
 import { useAllPunches, useSettings, calculateWorkedMinutes, formatMinutes, type Punch } from '@/hooks/useDB';
 

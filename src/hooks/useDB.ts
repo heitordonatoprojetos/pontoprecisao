@@ -116,4 +116,5 @@ export function useAdjustments() {
   return { adjustments, loading, add, remove, refresh };
 }
 
+export type { Punch, Adjustment, AppSettings };
 export { calculateWorkedMinutes, calculatePartialWorked, formatMinutes, todayStr, generateId, deletePunch, updatePunch, addPunch, getPunchesByDate };

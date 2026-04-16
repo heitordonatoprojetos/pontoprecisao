@@ -1,17 +1,17 @@
 import { useEffect, useState, useCallback } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Clock, LogIn, LogOut } from 'lucide-react';
+import { LogIn, LogOut } from 'lucide-react';
 import { useTodayPunches, calculatePartialWorked, formatMinutes } from '@/hooks/useDB';
 import { useSettings } from '@/hooks/useDB';
 
 export default function HomePage() {
-  const { punches, punch, loading } = useTodayPunches();
+  const { punches, punch } = useTodayPunches();
   const { settings } = useSettings();
-  const [now, setNow] = useState(Date.now());
+  const [, setTick] = useState(0);
   const [justPunched, setJustPunched] = useState(false);
 
   useEffect(() => {
-    const iv = setInterval(() => setNow(Date.now()), 10000);
+    const iv = setInterval(() => setTick(t => t + 1), 10000);
     return () => clearInterval(iv);
   }, []);
 
