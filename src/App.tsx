@@ -1,9 +1,11 @@
+import { useEffect, useState } from "react";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { BrowserRouter, Route, Routes, Navigate } from "react-router-dom";
+import { BrowserRouter, Route, Routes, Navigate, useNavigate, useLocation } from "react-router-dom";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { Toaster } from "@/components/ui/toaster";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { AuthProvider, useAuth } from "@/contexts/AuthContext";
+import { supabase } from "@/integrations/supabase/client";
 import BottomNav from "@/components/BottomNav";
 import InstallPrompt from "@/components/InstallPrompt";
 import HomePage from "@/pages/HomePage";
@@ -15,6 +17,32 @@ import AuthPage from "@/pages/AuthPage";
 import NotFound from "./pages/NotFound.tsx";
 
 const queryClient = new QueryClient();
+const MIN_PUNCHES = 6;
+
+function OnboardingGate() {
+  const { user } = useAuth();
+  const navigate = useNavigate();
+  const location = useLocation();
+  const [checked, setChecked] = useState(false);
+
+  useEffect(() => {
+    if (!user || checked) return;
+    (async () => {
+      const { data } = await supabase
+        .from('user_settings')
+        .select('default_punches')
+        .eq('user_id', user.id)
+        .maybeSingle();
+      const punches = (data?.default_punches as string[] | undefined) ?? [];
+      if (punches.length < MIN_PUNCHES && location.pathname !== '/config') {
+        navigate('/config?onboarding=1', { replace: true });
+      }
+      setChecked(true);
+    })();
+  }, [user, checked, navigate, location.pathname]);
+
+  return null;
+}
 
 function AppRoutes() {
   const { user, loading } = useAuth();
@@ -38,6 +66,7 @@ function AppRoutes() {
 
   return (
     <>
+      <OnboardingGate />
       <Routes>
         <Route path="/" element={<HomePage />} />
         <Route path="/diario" element={<DailyPage />} />
