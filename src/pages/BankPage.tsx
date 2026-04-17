@@ -43,6 +43,85 @@ export default function BankPage() {
     setHours(''); setMins(''); setDesc('');
   };
 
+  const buildRows = () => {
+    const byDate: Record<string, typeof punches> = {};
+    punches.forEach(p => {
+      if (!byDate[p.date]) byDate[p.date] = [];
+      byDate[p.date].push(p);
+    });
+    return Object.keys(byDate).sort().reverse().map(date => {
+      const day = byDate[date].sort((a, b) => a.timestamp - b.timestamp);
+      const times = day.map(p =>
+        new Date(p.timestamp).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })
+      );
+      const dow = new Date(date + 'T12:00:00').getDay();
+      const isWork = settings.workDays.includes(dow);
+      const worked = calculateWorkedMinutes(day);
+      const expected = isWork ? settings.dailyHours : 0;
+      const balance = worked - expected;
+      return {
+        dateFmt: new Date(date + 'T12:00:00').toLocaleDateString('pt-BR'),
+        punches: times.join(' | '),
+        worked: formatMinutes(worked),
+        expected: formatMinutes(expected),
+        balance: (balance > 0 ? '+' : '') + formatMinutes(balance),
+      };
+    });
+  };
+
+  const exportPDF = () => {
+    const rows = buildRows();
+    const doc = new jsPDF();
+    doc.setFontSize(16);
+    doc.text('Banco de Horas - Relatório', 14, 18);
+    doc.setFontSize(10);
+    doc.text(`Saldo total: ${totalBalance > 0 ? '+' : ''}${formatMinutes(totalBalance)}`, 14, 26);
+    doc.text(`Gerado em: ${new Date().toLocaleString('pt-BR')}`, 14, 32);
+    autoTable(doc, {
+      startY: 38,
+      head: [['Data', 'Batidas', 'Trabalhado', 'Esperado', 'Saldo']],
+      body: rows.map(r => [r.dateFmt, r.punches, r.worked, r.expected, r.balance]),
+      styles: { fontSize: 8 },
+      headStyles: { fillColor: [37, 99, 235] },
+    });
+    if (adjustments.length > 0) {
+      autoTable(doc, {
+        head: [['Data', 'Descrição', 'Minutos']],
+        body: adjustments.map(a => [
+          new Date(a.createdAt).toLocaleDateString('pt-BR'),
+          a.description,
+          (a.minutes > 0 ? '+' : '') + formatMinutes(a.minutes),
+        ]),
+        styles: { fontSize: 8 },
+        headStyles: { fillColor: [37, 99, 235] },
+      });
+    }
+    doc.save(`banco-horas-${new Date().toISOString().split('T')[0]}.pdf`);
+  };
+
+  const exportXLSX = () => {
+    const rows = buildRows();
+    const wb = XLSX.utils.book_new();
+    const ws = XLSX.utils.json_to_sheet(rows.map(r => ({
+      Data: r.dateFmt,
+      Batidas: r.punches,
+      Trabalhado: r.worked,
+      Esperado: r.expected,
+      Saldo: r.balance,
+    })));
+    XLSX.utils.book_append_sheet(wb, ws, 'Batidas');
+    if (adjustments.length > 0) {
+      const wsAdj = XLSX.utils.json_to_sheet(adjustments.map(a => ({
+        Data: new Date(a.createdAt).toLocaleDateString('pt-BR'),
+        Descrição: a.description,
+        Minutos: a.minutes,
+        Formatado: (a.minutes > 0 ? '+' : '') + formatMinutes(a.minutes),
+      })));
+      XLSX.utils.book_append_sheet(wb, wsAdj, 'Ajustes');
+    }
+    XLSX.writeFile(wb, `banco-horas-${new Date().toISOString().split('T')[0]}.xlsx`);
+  };
+
   return (
     <div className="min-h-screen px-4 pb-24 pt-6">
       <h1 className="mb-6 text-xl font-bold">Banco de Horas</h1>
