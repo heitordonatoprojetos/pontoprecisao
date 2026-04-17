@@ -68,12 +68,20 @@ export default function HomePage() {
         </p>
       </div>
 
-      {/* Status badge */}
-      <div className={`mt-4 inline-flex items-center gap-2 rounded-full px-4 py-1.5 text-sm font-medium ${
-        isWorking ? 'bg-accent text-accent-foreground' : 'bg-secondary text-secondary-foreground'
-      }`}>
-        <span className={`h-2 w-2 rounded-full ${isWorking ? 'bg-primary animate-pulse' : 'bg-muted-foreground'}`} />
-        {isWorking ? 'Trabalhando' : 'Fora'}
+      {/* Status badge + próxima batida */}
+      <div className="mt-4 flex flex-wrap items-center justify-center gap-2">
+        <div className={`inline-flex items-center gap-2 rounded-full px-4 py-1.5 text-sm font-medium ${
+          isWorking ? 'bg-accent text-accent-foreground' : 'bg-secondary text-secondary-foreground'
+        }`}>
+          <span className={`h-2 w-2 rounded-full ${isWorking ? 'bg-primary animate-pulse' : 'bg-muted-foreground'}`} />
+          {isWorking ? 'Trabalhando' : 'Fora'}
+        </div>
+        {nextExpectedPunch && (
+          <div className="inline-flex items-center gap-1.5 rounded-full bg-muted px-4 py-1.5 text-sm font-medium text-muted-foreground">
+            <span className="text-xs">Próxima:</span>
+            <span className="tabular-nums text-foreground font-semibold">{nextExpectedPunch}</span>
+          </div>
+        )}
       </div>
 
       {/* Punch button */}
