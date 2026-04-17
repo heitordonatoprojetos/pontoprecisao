@@ -1,5 +1,8 @@
 import { useState, useMemo } from 'react';
-import { Plus, Minus, Trash2, Wallet } from 'lucide-react';
+import { Plus, Minus, Trash2, Wallet, FileDown, FileSpreadsheet } from 'lucide-react';
+import jsPDF from 'jspdf';
+import autoTable from 'jspdf-autotable';
+import * as XLSX from 'xlsx';
 import { useAdjustments, useAllPunches, useSettings, calculateWorkedMinutes, formatMinutes } from '@/hooks/useDB';
 
 export default function BankPage() {
