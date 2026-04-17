@@ -5,6 +5,7 @@ import { Toaster } from "@/components/ui/toaster";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { AuthProvider, useAuth } from "@/contexts/AuthContext";
 import BottomNav from "@/components/BottomNav";
+import InstallPrompt from "@/components/InstallPrompt";
 import HomePage from "@/pages/HomePage";
 import DailyPage from "@/pages/DailyPage";
 import MonthlyPage from "@/pages/MonthlyPage";
