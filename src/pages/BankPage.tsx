@@ -178,6 +178,24 @@ export default function BankPage() {
         </div>
       )}
 
+      {/* Export buttons */}
+      <div className="mb-6 flex gap-3">
+        <button
+          onClick={exportPDF}
+          disabled={punches.length === 0}
+          className="flex flex-1 items-center justify-center gap-2 rounded-xl border border-border bg-secondary py-3 text-sm font-semibold text-secondary-foreground hover:bg-secondary/80 disabled:opacity-50"
+        >
+          <FileDown className="h-4 w-4" /> Baixar PDF
+        </button>
+        <button
+          onClick={exportXLSX}
+          disabled={punches.length === 0}
+          className="flex flex-1 items-center justify-center gap-2 rounded-xl border border-border bg-secondary py-3 text-sm font-semibold text-secondary-foreground hover:bg-secondary/80 disabled:opacity-50"
+        >
+          <FileSpreadsheet className="h-4 w-4" /> Baixar XLSX
+        </button>
+      </div>
+
       {/* History */}
       <p className="mb-2 text-sm font-medium text-muted-foreground">Histórico de ajustes</p>
       {adjustments.length === 0 && <p className="py-8 text-center text-sm text-muted-foreground">Nenhum ajuste registrado</p>}
