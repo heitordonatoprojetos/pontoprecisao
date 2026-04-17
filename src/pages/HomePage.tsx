@@ -49,10 +49,10 @@ export default function HomePage() {
   })();
 
   const handlePunch = useCallback(async () => {
-    await punch();
+    await punch(settings.clockOffsetMinutes ?? 0);
     setJustPunched(true);
     setTimeout(() => setJustPunched(false), 1200);
-  }, [punch]);
+  }, [punch, settings.clockOffsetMinutes]);
 
   const nextType = !lastPunch || lastPunch.type === 'out' ? 'in' : 'out';
 

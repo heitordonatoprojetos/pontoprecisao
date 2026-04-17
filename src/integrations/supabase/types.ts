@@ -70,6 +70,7 @@ export type Database = {
       }
       user_settings: {
         Row: {
+          clock_offset_minutes: number
           created_at: string
           daily_hours: number
           default_punches: string[]
@@ -79,6 +80,7 @@ export type Database = {
           work_days: number[]
         }
         Insert: {
+          clock_offset_minutes?: number
           created_at?: string
           daily_hours?: number
           default_punches?: string[]
@@ -88,6 +90,7 @@ export type Database = {
           work_days?: number[]
         }
         Update: {
+          clock_offset_minutes?: number
           created_at?: string
           daily_hours?: number
           default_punches?: string[]

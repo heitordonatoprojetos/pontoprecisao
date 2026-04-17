@@ -21,13 +21,21 @@ export interface AppSettings {
   dailyHours: number;
   workDays: number[];
   defaultPunches: string[];
+  /** Ajuste do relógio em minutos. Positivo = relógio adiantado (subtrai). Negativo = atrasado (soma). */
+  clockOffsetMinutes: number;
 }
 
 export const DEFAULT_SETTINGS: AppSettings = {
   dailyHours: 480,
   workDays: [1, 2, 3, 4, 5],
   defaultPunches: ['08:00', '12:00', '13:00', '17:00'],
+  clockOffsetMinutes: 0,
 };
+
+/** Retorna o "agora" corrigido pelo offset do relógio configurado. */
+export function adjustedNow(offsetMinutes: number): number {
+  return Date.now() - offsetMinutes * 60_000;
+}
 
 // Calculations (pure functions, no DB dependency)
 export function calculateWorkedMinutes(punches: Punch[]): number {
@@ -88,11 +96,11 @@ export function useTodayPunches() {
 
   useEffect(() => { refresh(); }, [refresh]);
 
-  const punch = useCallback(async () => {
+  const punch = useCallback(async (offsetMinutes = 0) => {
     if (!user) return;
     const lastType = punches.length > 0 ? punches[punches.length - 1].type : 'out';
     const newType = lastType === 'in' ? 'out' : 'in';
-    const now = Date.now();
+    const now = adjustedNow(offsetMinutes);
     await supabase.from('punches').insert({
       user_id: user.id,
       timestamp: now,
@@ -146,6 +154,7 @@ export function useSettings() {
             dailyHours: data.daily_hours,
             workDays: data.work_days,
             defaultPunches: data.default_punches,
+            clockOffsetMinutes: (data as { clock_offset_minutes?: number }).clock_offset_minutes ?? 0,
           });
         }
         setLoading(false);
@@ -159,7 +168,8 @@ export function useSettings() {
       daily_hours: s.dailyHours,
       work_days: s.workDays,
       default_punches: s.defaultPunches,
-    }, { onConflict: 'user_id' });
+      clock_offset_minutes: s.clockOffsetMinutes,
+    } as never, { onConflict: 'user_id' });
     setSettingsState(s);
   }, [user]);
 
