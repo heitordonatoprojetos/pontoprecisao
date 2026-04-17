@@ -21,6 +21,33 @@ export default function HomePage() {
   const expected = settings.dailyHours;
   const balance = worked - expected;
 
+  // Calcula o offset (atraso/adiantamento) baseado na 1ª batida real vs 1ª esperada
+  // e aplica nas próximas batidas esperadas para fechar a carga horária do dia.
+  const nextExpectedPunch = (() => {
+    const defaults = settings.defaultPunches || [];
+    if (defaults.length === 0) return null;
+    if (punches.length >= defaults.length) return null;
+
+    const today = new Date();
+    const toDate = (hhmm: string) => {
+      const [h, m] = hhmm.split(':').map(Number);
+      const d = new Date(today);
+      d.setHours(h, m, 0, 0);
+      return d;
+    };
+
+    let offsetMs = 0;
+    if (punches.length > 0) {
+      const firstExpected = toDate(defaults[0]).getTime();
+      offsetMs = punches[0].timestamp - firstExpected;
+    }
+
+    const nextIdx = punches.length;
+    const nextExpected = toDate(defaults[nextIdx]).getTime() + offsetMs;
+    const d = new Date(nextExpected);
+    return d.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
+  })();
+
   const handlePunch = useCallback(async () => {
     await punch();
     setJustPunched(true);
@@ -41,12 +68,20 @@ export default function HomePage() {
         </p>
       </div>
 
-      {/* Status badge */}
-      <div className={`mt-4 inline-flex items-center gap-2 rounded-full px-4 py-1.5 text-sm font-medium ${
-        isWorking ? 'bg-accent text-accent-foreground' : 'bg-secondary text-secondary-foreground'
-      }`}>
-        <span className={`h-2 w-2 rounded-full ${isWorking ? 'bg-primary animate-pulse' : 'bg-muted-foreground'}`} />
-        {isWorking ? 'Trabalhando' : 'Fora'}
+      {/* Status badge + próxima batida */}
+      <div className="mt-4 flex flex-wrap items-center justify-center gap-2">
+        <div className={`inline-flex items-center gap-2 rounded-full px-4 py-1.5 text-sm font-medium ${
+          isWorking ? 'bg-accent text-accent-foreground' : 'bg-secondary text-secondary-foreground'
+        }`}>
+          <span className={`h-2 w-2 rounded-full ${isWorking ? 'bg-primary animate-pulse' : 'bg-muted-foreground'}`} />
+          {isWorking ? 'Trabalhando' : 'Fora'}
+        </div>
+        {nextExpectedPunch && (
+          <div className="inline-flex items-center gap-1.5 rounded-full bg-muted px-4 py-1.5 text-sm font-medium text-muted-foreground">
+            <span className="text-xs">Próxima:</span>
+            <span className="tabular-nums text-foreground font-semibold">{nextExpectedPunch}</span>
+          </div>
+        )}
       </div>
 
       {/* Punch button */}
