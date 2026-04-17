@@ -96,11 +96,11 @@ export function useTodayPunches() {
 
   useEffect(() => { refresh(); }, [refresh]);
 
-  const punch = useCallback(async () => {
+  const punch = useCallback(async (offsetMinutes = 0) => {
     if (!user) return;
     const lastType = punches.length > 0 ? punches[punches.length - 1].type : 'out';
     const newType = lastType === 'in' ? 'out' : 'in';
-    const now = Date.now();
+    const now = adjustedNow(offsetMinutes);
     await supabase.from('punches').insert({
       user_id: user.id,
       timestamp: now,
