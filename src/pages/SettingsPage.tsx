@@ -1,12 +1,43 @@
 import { useState } from 'react';
-import { Save, Plus, Trash2, Clock, LogOut, AlertCircle } from 'lucide-react';
+import { Save, Plus, Trash2, Clock, LogOut, AlertCircle, RefreshCw } from 'lucide-react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { useSettings } from '@/hooks/useDB';
 import { useAuth } from '@/contexts/AuthContext';
 import type { AppSettings } from '@/hooks/useDB';
+import { APP_FULL_VERSION } from '@/lib/version';
 
 const WEEKDAYS = ['Dom', 'Seg', 'Ter', 'Qua', 'Qui', 'Sex', 'Sáb'];
 const MIN_PUNCHES = 6;
+
+async function clearAppCacheAndReload() {
+  try {
+    const authBackup: Record<string, string> = {};
+    for (let i = 0; i < localStorage.length; i++) {
+      const k = localStorage.key(i);
+      if (k && (k.startsWith('sb-') || k.includes('supabase'))) {
+        authBackup[k] = localStorage.getItem(k) || '';
+      }
+    }
+    localStorage.clear();
+    sessionStorage.clear();
+    Object.entries(authBackup).forEach(([k, v]) => localStorage.setItem(k, v));
+
+    if ('caches' in window) {
+      const keys = await caches.keys();
+      await Promise.all(keys.map(k => caches.delete(k)));
+    }
+    if ('serviceWorker' in navigator) {
+      const regs = await navigator.serviceWorker.getRegistrations();
+      await Promise.all(regs.map(r => r.unregister()));
+    }
+  } catch (e) {
+    console.error('Erro ao limpar cache:', e);
+  }
+
+  const url = new URL(window.location.href);
+  url.searchParams.set('_r', Date.now().toString());
+  window.location.replace(url.toString());
+}
 
 export default function SettingsPage() {
   const { settings, update, loading } = useSettings();
@@ -73,6 +104,31 @@ export default function SettingsPage() {
             Bem-vindo! Para começar, configure pelo menos <strong>{MIN_PUNCHES} batidas padrão</strong> que correspondem ao seu expediente.
           </p>
         </div>
+      )}
+
+      {/* Update app */}
+      {!onboarding && (
+        <section className="mb-6 rounded-xl border border-primary/30 bg-primary/5 p-4">
+          <div className="flex items-start gap-3">
+            <RefreshCw className="h-5 w-5 shrink-0 text-primary mt-0.5" />
+            <div className="flex-1 min-w-0">
+              <p className="text-sm font-semibold">Atualizar aplicativo</p>
+              <p className="mt-0.5 text-xs text-muted-foreground">
+                Limpa o cache local e recarrega o app para aplicar atualizações. Seus dados permanecem salvos na nuvem.
+              </p>
+              <button
+                onClick={() => {
+                  if (confirm('Limpar cache e atualizar o aplicativo?')) {
+                    clearAppCacheAndReload();
+                  }
+                }}
+                className="mt-3 inline-flex items-center gap-2 rounded-lg bg-primary px-3 py-2 text-xs font-semibold text-primary-foreground hover:bg-primary/90"
+              >
+                <RefreshCw className="h-3.5 w-3.5" /> Atualizar agora
+              </button>
+            </div>
+          </div>
+        </section>
       )}
 
       {/* Daily hours */}
@@ -189,6 +245,13 @@ export default function SettingsPage() {
             <LogOut className="h-4 w-4" /> Sair
           </button>
         </section>
+      )}
+
+      {/* Version */}
+      {!onboarding && (
+        <p className="mt-6 text-center text-xs text-muted-foreground">
+          {APP_FULL_VERSION}
+        </p>
       )}
     </div>
   );

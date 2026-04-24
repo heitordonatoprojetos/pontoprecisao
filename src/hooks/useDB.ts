@@ -75,6 +75,49 @@ export function todayStr(): string {
   return new Date().toISOString().split('T')[0];
 }
 
+/** Converte "HH:MM" para Date no dia indicado (cria nova Date sem mutar a original). */
+function timeToDate(hhmm: string, base: Date): Date {
+  const [h, m] = hhmm.split(':').map(Number);
+  const d = new Date(base);
+  d.setHours(h, m, 0, 0);
+  return d;
+}
+
+/**
+ * Calcula a próxima batida esperada com base na duração de cada intervalo padrão.
+ *
+ * Regras:
+ * - Se ainda não bateu nada, retorna o primeiro horário padrão.
+ * - Para a próxima batida (índice n), pega a última batida real e adiciona a
+ *   DURAÇÃO do intervalo padrão correspondente (defaults[n] - defaults[n-1]).
+ * - Isso garante que tanto trabalho quanto pausa preservem suas durações
+ *   originais (almoço de 1h10 não estica; jornada de 4h continua 4h).
+ *
+ * Retorna null se já bateu todas as batidas previstas.
+ */
+export function calculateNextExpectedPunch(
+  punches: Punch[],
+  defaultPunches: string[],
+  today: Date = new Date(),
+): Date | null {
+  if (!defaultPunches || defaultPunches.length === 0) return null;
+  const sorted = [...punches].sort((a, b) => a.timestamp - b.timestamp);
+  if (sorted.length >= defaultPunches.length) return null;
+
+  // Sem batidas reais → próxima é a primeira esperada
+  if (sorted.length === 0) {
+    return timeToDate(defaultPunches[0], today);
+  }
+
+  const nextIdx = sorted.length;
+  const lastReal = sorted[sorted.length - 1].timestamp;
+  const prevDefault = timeToDate(defaultPunches[nextIdx - 1], today).getTime();
+  const nextDefault = timeToDate(defaultPunches[nextIdx], today).getTime();
+  const intervalMs = nextDefault - prevDefault;
+
+  return new Date(lastReal + intervalMs);
+}
+
 // Hooks
 
 export function useTodayPunches() {
@@ -187,7 +230,8 @@ export function useAllPunches() {
       .from('punches')
       .select('*')
       .eq('user_id', user.id)
-      .order('timestamp', { ascending: false });
+      .order('timestamp', { ascending: false })
+      .limit(2000);
     setPunches((data || []).map(r => ({ id: r.id, timestamp: Number(r.timestamp), type: r.type as 'in' | 'out', date: r.date })));
     setLoading(false);
   }, [user]);
@@ -208,7 +252,8 @@ export function useAdjustments() {
       .from('adjustments')
       .select('*')
       .eq('user_id', user.id)
-      .order('created_at', { ascending: false });
+      .order('created_at', { ascending: false })
+      .limit(2000);
     setAdj((data || []).map(r => ({
       id: r.id,
       date: r.date,
@@ -221,11 +266,11 @@ export function useAdjustments() {
 
   useEffect(() => { refresh(); }, [refresh]);
 
-  const add = useCallback(async (minutes: number, description: string) => {
+  const add = useCallback(async (minutes: number, description: string, date?: string) => {
     if (!user) return;
     await supabase.from('adjustments').insert({
       user_id: user.id,
-      date: todayStr(),
+      date: date ?? todayStr(),
       minutes,
       description,
     });
