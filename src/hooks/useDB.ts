@@ -230,7 +230,8 @@ export function useAllPunches() {
       .from('punches')
       .select('*')
       .eq('user_id', user.id)
-      .order('timestamp', { ascending: false });
+      .order('timestamp', { ascending: false })
+      .limit(2000);
     setPunches((data || []).map(r => ({ id: r.id, timestamp: Number(r.timestamp), type: r.type as 'in' | 'out', date: r.date })));
     setLoading(false);
   }, [user]);
@@ -251,7 +252,8 @@ export function useAdjustments() {
       .from('adjustments')
       .select('*')
       .eq('user_id', user.id)
-      .order('created_at', { ascending: false });
+      .order('created_at', { ascending: false })
+      .limit(2000);
     setAdj((data || []).map(r => ({
       id: r.id,
       date: r.date,
@@ -264,11 +266,11 @@ export function useAdjustments() {
 
   useEffect(() => { refresh(); }, [refresh]);
 
-  const add = useCallback(async (minutes: number, description: string) => {
+  const add = useCallback(async (minutes: number, description: string, date?: string) => {
     if (!user) return;
     await supabase.from('adjustments').insert({
       user_id: user.id,
-      date: todayStr(),
+      date: date ?? todayStr(),
       minutes,
       description,
     });
