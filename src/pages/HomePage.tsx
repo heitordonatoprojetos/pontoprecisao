@@ -1,14 +1,26 @@
-import { useEffect, useState, useCallback } from 'react';
+import { useEffect, useState, useCallback, useMemo } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { LogIn, LogOut } from 'lucide-react';
-import { useTodayPunches, calculatePartialWorked, formatMinutes } from '@/hooks/useDB';
+import { LogIn, LogOut, Pencil, X } from 'lucide-react';
+import {
+  useTodayPunches,
+  calculatePartialWorked,
+  formatMinutes,
+  calculateNextExpectedPunch,
+  addPunch,
+  todayStr,
+} from '@/hooks/useDB';
 import { useSettings } from '@/hooks/useDB';
+import { useAuth } from '@/contexts/AuthContext';
 
 export default function HomePage() {
-  const { punches, punch } = useTodayPunches();
+  const { user } = useAuth();
+  const { punches, punch, refresh } = useTodayPunches();
   const { settings } = useSettings();
   const [, setTick] = useState(0);
   const [justPunched, setJustPunched] = useState(false);
+  const [showManual, setShowManual] = useState(false);
+  const [manualTime, setManualTime] = useState('');
+  const [manualSaving, setManualSaving] = useState(false);
 
   useEffect(() => {
     const iv = setInterval(() => setTick(t => t + 1), 10000);
@@ -17,36 +29,15 @@ export default function HomePage() {
 
   const lastPunch = punches.length > 0 ? punches[punches.length - 1] : null;
   const isWorking = lastPunch?.type === 'in';
-  const worked = calculatePartialWorked(punches);
+
+  const worked = useMemo(() => calculatePartialWorked(punches), [punches]);
   const expected = settings.dailyHours;
   const balance = worked - expected;
 
-  // Calcula o offset (atraso/adiantamento) baseado na 1ª batida real vs 1ª esperada
-  // e aplica nas próximas batidas esperadas para fechar a carga horária do dia.
-  const nextExpectedPunch = (() => {
-    const defaults = settings.defaultPunches || [];
-    if (defaults.length === 0) return null;
-    if (punches.length >= defaults.length) return null;
-
-    const today = new Date();
-    const toDate = (hhmm: string) => {
-      const [h, m] = hhmm.split(':').map(Number);
-      const d = new Date(today);
-      d.setHours(h, m, 0, 0);
-      return d;
-    };
-
-    let offsetMs = 0;
-    if (punches.length > 0) {
-      const firstExpected = toDate(defaults[0]).getTime();
-      offsetMs = punches[0].timestamp - firstExpected;
-    }
-
-    const nextIdx = punches.length;
-    const nextExpected = toDate(defaults[nextIdx]).getTime() + offsetMs;
-    const d = new Date(nextExpected);
-    return d.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
-  })();
+  const nextExpectedPunch = useMemo(() => {
+    const next = calculateNextExpectedPunch(punches, settings.defaultPunches || []);
+    return next ? next.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' }) : null;
+  }, [punches, settings.defaultPunches]);
 
   const handlePunch = useCallback(async () => {
     await punch(settings.clockOffsetMinutes ?? 0);
@@ -55,6 +46,32 @@ export default function HomePage() {
   }, [punch, settings.clockOffsetMinutes]);
 
   const nextType = !lastPunch || lastPunch.type === 'out' ? 'in' : 'out';
+
+  const openManual = () => {
+    const now = new Date();
+    setManualTime(
+      `${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}`,
+    );
+    setShowManual(true);
+  };
+
+  const submitManual = async () => {
+    if (!manualTime || !user) return;
+    setManualSaving(true);
+    const [h, m] = manualTime.split(':').map(Number);
+    const date = todayStr();
+    const d = new Date(date + 'T12:00:00');
+    d.setHours(h, m, 0, 0);
+    await addPunch(user.id, {
+      timestamp: d.getTime(),
+      type: nextType,
+      date,
+    });
+    await refresh();
+    if (navigator.vibrate) navigator.vibrate(50);
+    setShowManual(false);
+    setManualSaving(false);
+  };
 
   return (
     <div className="flex min-h-screen flex-col items-center px-4 pb-24 pt-12">
@@ -84,13 +101,13 @@ export default function HomePage() {
         )}
       </div>
 
-      {/* Punch button */}
-      <div className="relative mt-10">
+      {/* Punch buttons */}
+      <div className="relative mt-10 flex items-center gap-4">
         {/* Pulse ring */}
         <AnimatePresence>
           {justPunched && (
             <motion.div
-              className="absolute inset-0 rounded-full bg-primary/30"
+              className="absolute left-1/2 top-1/2 h-36 w-36 -translate-x-1/2 -translate-y-1/2 rounded-full bg-primary/30"
               initial={{ scale: 1, opacity: 0.6 }}
               animate={{ scale: 2.5, opacity: 0 }}
               exit={{ opacity: 0 }}
@@ -101,6 +118,7 @@ export default function HomePage() {
         <motion.button
           whileTap={{ scale: 0.92 }}
           onClick={handlePunch}
+          aria-label="Bater ponto agora"
           className={`relative z-10 flex h-36 w-36 flex-col items-center justify-center rounded-full shadow-lg transition-colors ${
             nextType === 'in'
               ? 'bg-primary text-primary-foreground'
@@ -109,6 +127,15 @@ export default function HomePage() {
         >
           {nextType === 'in' ? <LogIn className="mb-1 h-8 w-8" /> : <LogOut className="mb-1 h-8 w-8" />}
           <span className="text-sm font-semibold">{nextType === 'in' ? 'Entrada' : 'Saída'}</span>
+        </motion.button>
+
+        <motion.button
+          whileTap={{ scale: 0.92 }}
+          onClick={openManual}
+          aria-label="Bater com horário customizado"
+          className="relative z-10 flex h-16 w-16 flex-col items-center justify-center rounded-full border border-border bg-card text-foreground shadow-md transition-colors hover:bg-secondary"
+        >
+          <Pencil className="h-5 w-5" />
         </motion.button>
       </div>
 
@@ -140,6 +167,46 @@ export default function HomePage() {
                 {new Date(p.timestamp).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}
               </span>
             ))}
+          </div>
+        </div>
+      )}
+
+      {/* Manual punch modal */}
+      {showManual && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4" onClick={() => !manualSaving && setShowManual(false)}>
+          <div className="w-full max-w-xs rounded-2xl bg-card border border-border p-5 shadow-xl" onClick={e => e.stopPropagation()}>
+            <div className="flex items-center justify-between mb-4">
+              <p className="font-semibold text-base">Bater com horário</p>
+              <button onClick={() => setShowManual(false)} className="text-muted-foreground hover:text-foreground" aria-label="Fechar">
+                <X className="h-4 w-4" />
+              </button>
+            </div>
+            <p className="text-xs text-muted-foreground mb-3">
+              Tipo: <span className="font-semibold text-foreground">{nextType === 'in' ? 'Entrada' : 'Saída'}</span>
+            </p>
+            <input
+              type="time"
+              value={manualTime}
+              onChange={e => setManualTime(e.target.value)}
+              className="w-full rounded-lg border border-input bg-background px-3 py-3 text-base tabular-nums text-center"
+              autoFocus
+            />
+            <div className="mt-4 flex gap-2">
+              <button
+                onClick={() => setShowManual(false)}
+                disabled={manualSaving}
+                className="flex-1 rounded-lg border border-border bg-secondary py-2.5 text-sm font-medium text-secondary-foreground hover:bg-secondary/80 disabled:opacity-50"
+              >
+                Cancelar
+              </button>
+              <button
+                onClick={submitManual}
+                disabled={manualSaving || !manualTime}
+                className="flex-1 rounded-lg bg-primary py-2.5 text-sm font-semibold text-primary-foreground hover:bg-primary/90 disabled:opacity-50"
+              >
+                {manualSaving ? 'Salvando…' : 'Confirmar'}
+              </button>
+            </div>
           </div>
         </div>
       )}
