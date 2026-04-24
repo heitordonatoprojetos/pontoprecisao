@@ -1,12 +1,43 @@
 import { useState } from 'react';
-import { Save, Plus, Trash2, Clock, LogOut, AlertCircle } from 'lucide-react';
+import { Save, Plus, Trash2, Clock, LogOut, AlertCircle, RefreshCw } from 'lucide-react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { useSettings } from '@/hooks/useDB';
 import { useAuth } from '@/contexts/AuthContext';
 import type { AppSettings } from '@/hooks/useDB';
+import { APP_FULL_VERSION } from '@/lib/version';
 
 const WEEKDAYS = ['Dom', 'Seg', 'Ter', 'Qua', 'Qui', 'Sex', 'Sáb'];
 const MIN_PUNCHES = 6;
+
+async function clearAppCacheAndReload() {
+  try {
+    const authBackup: Record<string, string> = {};
+    for (let i = 0; i < localStorage.length; i++) {
+      const k = localStorage.key(i);
+      if (k && (k.startsWith('sb-') || k.includes('supabase'))) {
+        authBackup[k] = localStorage.getItem(k) || '';
+      }
+    }
+    localStorage.clear();
+    sessionStorage.clear();
+    Object.entries(authBackup).forEach(([k, v]) => localStorage.setItem(k, v));
+
+    if ('caches' in window) {
+      const keys = await caches.keys();
+      await Promise.all(keys.map(k => caches.delete(k)));
+    }
+    if ('serviceWorker' in navigator) {
+      const regs = await navigator.serviceWorker.getRegistrations();
+      await Promise.all(regs.map(r => r.unregister()));
+    }
+  } catch (e) {
+    console.error('Erro ao limpar cache:', e);
+  }
+
+  const url = new URL(window.location.href);
+  url.searchParams.set('_r', Date.now().toString());
+  window.location.replace(url.toString());
+}
 
 export default function SettingsPage() {
   const { settings, update, loading } = useSettings();
