@@ -75,6 +75,49 @@ export function todayStr(): string {
   return new Date().toISOString().split('T')[0];
 }
 
+/** Converte "HH:MM" para Date no dia indicado (cria nova Date sem mutar a original). */
+function timeToDate(hhmm: string, base: Date): Date {
+  const [h, m] = hhmm.split(':').map(Number);
+  const d = new Date(base);
+  d.setHours(h, m, 0, 0);
+  return d;
+}
+
+/**
+ * Calcula a próxima batida esperada com base na duração de cada intervalo padrão.
+ *
+ * Regras:
+ * - Se ainda não bateu nada, retorna o primeiro horário padrão.
+ * - Para a próxima batida (índice n), pega a última batida real e adiciona a
+ *   DURAÇÃO do intervalo padrão correspondente (defaults[n] - defaults[n-1]).
+ * - Isso garante que tanto trabalho quanto pausa preservem suas durações
+ *   originais (almoço de 1h10 não estica; jornada de 4h continua 4h).
+ *
+ * Retorna null se já bateu todas as batidas previstas.
+ */
+export function calculateNextExpectedPunch(
+  punches: Punch[],
+  defaultPunches: string[],
+  today: Date = new Date(),
+): Date | null {
+  if (!defaultPunches || defaultPunches.length === 0) return null;
+  const sorted = [...punches].sort((a, b) => a.timestamp - b.timestamp);
+  if (sorted.length >= defaultPunches.length) return null;
+
+  // Sem batidas reais → próxima é a primeira esperada
+  if (sorted.length === 0) {
+    return timeToDate(defaultPunches[0], today);
+  }
+
+  const nextIdx = sorted.length;
+  const lastReal = sorted[sorted.length - 1].timestamp;
+  const prevDefault = timeToDate(defaultPunches[nextIdx - 1], today).getTime();
+  const nextDefault = timeToDate(defaultPunches[nextIdx], today).getTime();
+  const intervalMs = nextDefault - prevDefault;
+
+  return new Date(lastReal + intervalMs);
+}
+
 // Hooks
 
 export function useTodayPunches() {
