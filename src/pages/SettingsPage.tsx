@@ -106,6 +106,31 @@ export default function SettingsPage() {
         </div>
       )}
 
+      {/* Update app */}
+      {!onboarding && (
+        <section className="mb-6 rounded-xl border border-primary/30 bg-primary/5 p-4">
+          <div className="flex items-start gap-3">
+            <RefreshCw className="h-5 w-5 shrink-0 text-primary mt-0.5" />
+            <div className="flex-1 min-w-0">
+              <p className="text-sm font-semibold">Atualizar aplicativo</p>
+              <p className="mt-0.5 text-xs text-muted-foreground">
+                Limpa o cache local e recarrega o app para aplicar atualizações. Seus dados permanecem salvos na nuvem.
+              </p>
+              <button
+                onClick={() => {
+                  if (confirm('Limpar cache e atualizar o aplicativo?')) {
+                    clearAppCacheAndReload();
+                  }
+                }}
+                className="mt-3 inline-flex items-center gap-2 rounded-lg bg-primary px-3 py-2 text-xs font-semibold text-primary-foreground hover:bg-primary/90"
+              >
+                <RefreshCw className="h-3.5 w-3.5" /> Atualizar agora
+              </button>
+            </div>
+          </div>
+        </section>
+      )}
+
       {/* Daily hours */}
       <section className="mb-6 rounded-xl bg-card border border-border p-4">
         <p className="text-sm font-semibold mb-3">Carga horária diária</p>
