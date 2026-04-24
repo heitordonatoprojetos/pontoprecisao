@@ -246,6 +246,13 @@ export default function SettingsPage() {
           </button>
         </section>
       )}
+
+      {/* Version */}
+      {!onboarding && (
+        <p className="mt-6 text-center text-xs text-muted-foreground">
+          {APP_FULL_VERSION}
+        </p>
+      )}
     </div>
   );
 }
