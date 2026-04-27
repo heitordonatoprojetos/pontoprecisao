@@ -15,6 +15,7 @@ import BankPage from "@/pages/BankPage";
 import SettingsPage from "@/pages/SettingsPage";
 import AuthPage from "@/pages/AuthPage";
 import NotFound from "./pages/NotFound.tsx";
+import { usePunchReminder } from "@/hooks/usePunchReminder";
 
 const queryClient = new QueryClient();
 const MIN_PUNCHES = 6;
@@ -67,6 +68,7 @@ function AppRoutes() {
   return (
     <>
       <OnboardingGate />
+      <ReminderRunner />
       <Routes>
         <Route path="/" element={<HomePage />} />
         <Route path="/diario" element={<DailyPage />} />
@@ -80,6 +82,11 @@ function AppRoutes() {
       <InstallPrompt />
     </>
   );
+}
+
+function ReminderRunner() {
+  usePunchReminder();
+  return null;
 }
 
 const App = () => (
