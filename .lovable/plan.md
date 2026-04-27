@@ -1,54 +1,91 @@
+# Ponto Certo v1.1.3
 
-# Plano Ponto Certo v1.1.2
+Implementação focada e cuidadosa: NÃO alterar lógica já estável (cálculo de jornada, banco de horas, batida deslizante, ajuste de relógio). Mudanças isoladas em arquivos específicos.
 
-## 1. Botão de batida manual (HomePage)
-- Adicionar segundo botão circular menor ao lado do principal (ícone `Clock`/`Pencil`).
-- Ao clicar, abre modal com `<input type="time">` pré-preenchido com hora atual.
-- Confirma → usa `addPunch(user.id, ...)` com timestamp construído sobre a data de hoje + hora escolhida; tipo é alternado automaticamente (mesma lógica `nextType`).
-- Refresh da lista após inserir.
+## 1. Edição mais abrangente no Diário
 
-## 2. Cálculo correto da "Próxima batida" (`useDB.ts`)
-Nova função pura `calculateNextExpectedPunch(punches, defaultPunches, today)`:
-- Considera **duração de cada intervalo** entre batidas padrão consecutivas (não soma offset acumulado fixo).
-- Para o índice `n` da próxima batida:
-  - Se não há batidas reais ainda → retorna `defaults[0]`.
-  - Senão pega `lastReal = punches[n-1].timestamp`.
-  - Calcula `intervalDuration = defaults[n] - defaults[n-1]` (em minutos, mesma data base).
-  - **Trabalho** (entrada→saída): `next = lastReal + intervalDuration` (jornada desliza).
-  - **Pausa** (saída→entrada): `next = lastReal + intervalDuration` (pausa fixa, não estica nem encolhe — mantém a duração padrão).
-  - Em ambos os casos a duração padrão é preservada; o efeito é exatamente o pedido (atrasou 10min na entrada → saída atrasa 10min; atrasou 20min na saída do almoço → volta 20min depois mas almoço continua 1h10).
-- Retorna `Date` ou `null` se já bateu todas.
-- HomePage passa a usar essa função no badge "Próxima:".
+Em `src/pages/DailyPage.tsx`:
 
-## 3. Banco de horas com dias faltantes (`BankPage.tsx`)
-- `buildRows`/`workedBalance` passam a iterar dia-a-dia desde **a data da primeira batida** até hoje.
-- Para cada dia:
-  - Se dia útil (`settings.workDays`): `expected = dailyHours`. Se sem batidas e sem ajuste → linha de "Falta" com saldo negativo.
-  - Se não-útil: `expected = 0`.
-  - Soma ajustes daquele dia (matching por `adjustments.date`).
-- **Importante**: nada antes da primeira batida entra no cálculo (evita débito histórico falso).
-- Botão "Marcar feriado/abono" em linhas vazias → abre modal pequeno com descrição (default "Feriado") → cria `adjustment` com `+dailyHours` naquela data específica (precisa permitir setar `date` no `add`; estendo `useAdjustments.add` para aceitar `date` opcional).
-- Migração SQL **não necessária** (`adjustments.date` já é text e pode receber qualquer data).
-- PDF/XLSX usam o mesmo `buildRows`, então automaticamente incluem os dias faltantes.
-- Tudo envolvido em `useMemo` para performance.
+- No bloco de edição (que hoje só mostra `<input type="time">`), adicionar:
+  - Um `<select>` para alterar o **tipo** (`Entrada` / `Saída`) da batida existente.
+  - Mantém o input de horário.
+  - Botão "Salvar" e "Cancelar".
+- Estender `handleEdit` para também enviar o novo tipo. Como `updatePunch(id, timestamp)` em `useDB.ts` só aceita timestamp, vou adicionar um segundo parâmetro opcional:
+  ```ts
+  export async function updatePunch(id: string, timestamp: number, type?: 'in' | 'out')
+  ```
+  Se `type` for passado, inclui no `.update({...})`. Sem alterar nenhum chamador existente.
 
-## 4. Botão "Atualizar app" (SettingsPage — topo)
-- Card no topo com botão `RefreshCw`.
-- Ao clicar (com confirm): limpa `localStorage`, `sessionStorage`, `caches.keys()` + `caches.delete`, desregistra service workers, então `location.reload()` com cache-bust.
-- Não toca dados do Supabase (eles persistem na nuvem).
+Nada mais é tocado nessa página.
 
-## 5. Performance e versão
-- `useMemo` em `buildRows` e totals do BankPage.
-- `.limit(2000)` em `useAllPunches` e `useAdjustments` por segurança.
-- Footer no `SettingsPage`: "Ponto Certo v1.1.2" centralizado, texto pequeno, mute.
-- Constante `APP_VERSION = '1.1.2'` em arquivo novo `src/lib/version.ts` para reuso futuro.
+## 2. Notificações sonoras de lembrete (PWA, baixa bateria)
 
-## Arquivos a editar
-- `src/hooks/useDB.ts` — `calculateNextExpectedPunch`, limits, `add(date?)`.
-- `src/pages/HomePage.tsx` — botão manual + modal + uso da nova função.
-- `src/pages/BankPage.tsx` — buildRows com dias faltantes, marcar feriado, useMemo.
-- `src/pages/SettingsPage.tsx` — botão atualizar app + label de versão.
-- `src/lib/version.ts` — novo, exporta APP_VERSION.
+### 2.1 Toggle nas Configurações
 
-## Não será alterado
-- Auth, onboarding gate, ajuste de relógio, exportações PDF/XLSX (lógica), InstallPrompt, schema do banco.
+Em `src/pages/SettingsPage.tsx`, nova seção "Notificações de batida":
+- Switch (ativar/desativar).
+- Ao ativar pela 1ª vez: chamar `Notification.requestPermission()`. Se negado, mostra aviso.
+- Persistência: salvar `notificationsEnabled: boolean` em `localStorage` (chave `pc:notifications`). É preferência do dispositivo, não da conta — assim cada celular controla o seu.
+- Botão "Testar notificação" para o usuário validar som/permissão.
+
+### 2.2 Agendamento "leve em recursos"
+
+Criar `src/lib/punchReminder.ts` com um agendador simples baseado em `setTimeout` (1 timer ativo por vez, recalculado quando batidas/configurações mudam):
+
+```text
+calcula próxima batida esperada (mesma função calculateNextExpectedPunch
+                                   já usada na HomePage)
+       ↓
+alvo = próximaBatida - 1 minuto
+       ↓
+se alvo > agora → agenda 1 setTimeout
+       ↓
+no disparo: dispara notificação + som,
+            depois recalcula
+```
+
+Vantagens: zero polling, sem interval rodando, custo praticamente nulo.
+
+### 2.3 Hook `usePunchReminder`
+
+Novo hook chamado uma única vez no `App.tsx` (dentro do `AuthProvider`, só quando há usuário logado):
+- Lê `notificationsEnabled` do localStorage.
+- Usa `useTodayPunches()` + `useSettings()` para reagir a novas batidas / mudanças de configuração.
+- Cancela o timer anterior e agenda o novo sempre que algo muda.
+- Limpa o timer no unmount.
+
+### 2.4 Notificação + som
+
+- Notificação: tenta via Service Worker (`registration.showNotification`) para funcionar mesmo com o app em background no PWA. Fallback para `new Notification(...)`.
+- Som: pequeno `data:audio/wav;base64,...` curto (beep) tocado via `new Audio(...).play()`. Sem dependência externa, sem arquivo em `public/`.
+- Vibração leve (`navigator.vibrate([200, 100, 200])`) para dispositivos móveis.
+
+### 2.5 Suporte offline (Service Worker)
+
+O `vite-plugin-pwa` já gera SW com `autoUpdate`. Para que a notificação dispare mesmo offline, o `setTimeout` é local (JS na aba/PWA aberto). Vamos:
+- Documentar para o usuário (texto curto na seção de Configurações): "As notificações funcionam enquanto o app estiver aberto em segundo plano. No iPhone é necessário instalar como PWA."
+- Não vamos implementar Push API (exige servidor + assinatura) — fica fora do escopo desta versão.
+
+## 3. Versionamento
+
+Em `src/lib/version.ts`: bump para `1.1.3`. Sem outras alterações.
+
+## Arquivos afetados
+
+- `src/lib/version.ts` — bump
+- `src/hooks/useDB.ts` — `updatePunch` ganha 3º parâmetro opcional `type` (mudança retrocompatível)
+- `src/pages/DailyPage.tsx` — UI de edição inclui tipo
+- `src/pages/SettingsPage.tsx` — seção "Notificações"
+- `src/lib/punchReminder.ts` — **novo**: agendador + som + dispatch de notificação
+- `src/hooks/usePunchReminder.ts` — **novo**: hook que escuta batidas/configs e reagenda
+- `src/App.tsx` — chama o hook (1 linha) dentro da árvore autenticada
+
+## O que NÃO será alterado
+
+- `calculateWorkedMinutes`, `calculatePartialWorked`, `calculateNextExpectedPunch`
+- Lógica do `BankPage` (banco de horas, dias faltantes, marcar feriado)
+- `HomePage` (botão manual, exibição da próxima batida)
+- Auth, Google login, onboarding, ajuste de relógio
+- Service worker / PWA config (já está correto)
+
+Posso prosseguir?
