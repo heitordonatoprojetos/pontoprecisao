@@ -11,6 +11,7 @@ export default function DailyPage() {
   const { settings } = useSettings();
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editTime, setEditTime] = useState('');
+  const [editType, setEditType] = useState<'in' | 'out'>('in');
   const [showAdd, setShowAdd] = useState(false);
   const [addTime, setAddTime] = useState('');
   const [addType, setAddType] = useState<'in' | 'out'>('in');
@@ -45,19 +46,22 @@ export default function DailyPage() {
     await load();
   };
 
-  const handleEdit = async (p: Punch) => {
-    if (editingId === p.id) {
-      const [h, m] = editTime.split(':').map(Number);
-      const d = new Date(p.timestamp);
-      d.setHours(h, m, 0, 0);
-      await updatePunch(p.id, d.getTime());
-      setEditingId(null);
-      await load();
-    } else {
-      setEditingId(p.id);
-      setEditTime(new Date(p.timestamp).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' }));
-    }
+  const startEdit = (p: Punch) => {
+    setEditingId(p.id);
+    setEditTime(new Date(p.timestamp).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' }));
+    setEditType(p.type);
   };
+
+  const saveEdit = async (p: Punch) => {
+    const [h, m] = editTime.split(':').map(Number);
+    const d = new Date(p.timestamp);
+    d.setHours(h, m, 0, 0);
+    await updatePunch(p.id, d.getTime(), editType);
+    setEditingId(null);
+    await load();
+  };
+
+  const cancelEdit = () => setEditingId(null);
 
   const handleAdd = async () => {
     if (!addTime || !user) return;
