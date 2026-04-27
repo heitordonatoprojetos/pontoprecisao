@@ -38,13 +38,17 @@ export function adjustedNow(offsetMinutes: number): number {
 }
 
 // Calculations (pure functions, no DB dependency)
+/**
+ * Soma o tempo trabalhado considerando que as batidas se alternam por POSIÇÃO
+ * (1ª = entrada, 2ª = saída, 3ª = entrada, ...) independentemente do campo `type`,
+ * que pode estar incorreto após edições/inserções manuais. Isso evita perda de
+ * intervalos quando o tipo gravado não bate com a ordem cronológica real.
+ */
 export function calculateWorkedMinutes(punches: Punch[]): number {
   let total = 0;
   const sorted = [...punches].sort((a, b) => a.timestamp - b.timestamp);
-  for (let i = 0; i < sorted.length - 1; i += 2) {
-    if (sorted[i].type === 'in' && sorted[i + 1]?.type === 'out') {
-      total += (sorted[i + 1].timestamp - sorted[i].timestamp) / 60000;
-    }
+  for (let i = 0; i + 1 < sorted.length; i += 2) {
+    total += (sorted[i + 1].timestamp - sorted[i].timestamp) / 60000;
   }
   return Math.round(total);
 }
@@ -55,10 +59,9 @@ export function calculatePartialWorked(punches: Punch[]): number {
   for (let i = 0; i < sorted.length; i += 2) {
     const inP = sorted[i];
     const outP = sorted[i + 1];
-    if (inP?.type === 'in') {
-      const end = outP?.type === 'out' ? outP.timestamp : Date.now();
-      total += (end - inP.timestamp) / 60000;
-    }
+    if (!inP) continue;
+    const end = outP ? outP.timestamp : Date.now();
+    total += (end - inP.timestamp) / 60000;
   }
   return Math.round(total);
 }
