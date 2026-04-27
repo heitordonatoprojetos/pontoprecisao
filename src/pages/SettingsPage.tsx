@@ -1,10 +1,17 @@
-import { useState } from 'react';
-import { Save, Plus, Trash2, Clock, LogOut, AlertCircle, RefreshCw } from 'lucide-react';
+import { useEffect, useState } from 'react';
+import { Save, Plus, Trash2, Clock, LogOut, AlertCircle, RefreshCw, Bell, BellOff } from 'lucide-react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { useSettings } from '@/hooks/useDB';
 import { useAuth } from '@/contexts/AuthContext';
 import type { AppSettings } from '@/hooks/useDB';
 import { APP_FULL_VERSION } from '@/lib/version';
+import {
+  isNotificationsEnabled,
+  setNotificationsEnabled,
+  requestNotificationPermission,
+  testNotification,
+  clearReminder,
+} from '@/lib/punchReminder';
 
 const WEEKDAYS = ['Dom', 'Seg', 'Ter', 'Qua', 'Qui', 'Sex', 'Sáb'];
 const MIN_PUNCHES = 6;
@@ -54,6 +61,42 @@ export default function SettingsPage() {
     setLocal(settings);
     setSynced(true);
   }
+
+  // Notifications local state (per-device)
+  const [notifEnabled, setNotifEnabled] = useState<boolean>(isNotificationsEnabled());
+  const [notifPerm, setNotifPerm] = useState<NotificationPermission | 'unsupported'>(
+    typeof Notification === 'undefined' ? 'unsupported' : Notification.permission,
+  );
+  const [notifTesting, setNotifTesting] = useState(false);
+  const [notifMsg, setNotifMsg] = useState<string | null>(null);
+
+  useEffect(() => { setNotifEnabled(isNotificationsEnabled()); }, []);
+
+  const toggleNotif = async () => {
+    if (notifEnabled) {
+      setNotificationsEnabled(false);
+      setNotifEnabled(false);
+      clearReminder();
+      setNotifMsg('Notificações desativadas.');
+      return;
+    }
+    const perm = await requestNotificationPermission();
+    setNotifPerm(perm);
+    if (perm !== 'granted') {
+      setNotifMsg('Permissão negada. Habilite nas configurações do navegador/celular.');
+      return;
+    }
+    setNotificationsEnabled(true);
+    setNotifEnabled(true);
+    setNotifMsg('Ativado! Você receberá um aviso 1 min antes de cada batida.');
+  };
+
+  const handleTest = async () => {
+    setNotifTesting(true);
+    const ok = await testNotification();
+    setNotifMsg(ok ? 'Notificação enviada!' : 'Permissão negada.');
+    setNotifTesting(false);
+  };
 
   const setDailyHours = (h: number, m: number) => {
     setLocal(s => ({ ...s, dailyHours: h * 60 + m }));
@@ -130,6 +173,51 @@ export default function SettingsPage() {
           </div>
         </section>
       )}
+
+      {/* Notifications */}
+      {!onboarding && (
+        <section className="mb-6 rounded-xl bg-card border border-border p-4">
+          <div className="flex items-start gap-3">
+            {notifEnabled ? <Bell className="h-5 w-5 shrink-0 text-primary mt-0.5" /> : <BellOff className="h-5 w-5 shrink-0 text-muted-foreground mt-0.5" />}
+            <div className="flex-1 min-w-0">
+              <div className="flex items-center justify-between gap-2">
+                <p className="text-sm font-semibold">Notificações de batida</p>
+                <button
+                  onClick={toggleNotif}
+                  role="switch"
+                  aria-checked={notifEnabled}
+                  className={`relative inline-flex h-6 w-11 shrink-0 items-center rounded-full transition-colors ${notifEnabled ? 'bg-primary' : 'bg-muted'}`}
+                >
+                  <span className={`inline-block h-5 w-5 rounded-full bg-background shadow transition-transform ${notifEnabled ? 'translate-x-5' : 'translate-x-0.5'}`} />
+                </button>
+              </div>
+              <p className="mt-1 text-xs text-muted-foreground">
+                Aviso sonoro 1 minuto antes da próxima batida (calculada com base na batida anterior).
+              </p>
+              {notifPerm === 'unsupported' && (
+                <p className="mt-2 text-xs text-destructive">Seu navegador não suporta notificações.</p>
+              )}
+              {notifPerm === 'denied' && (
+                <p className="mt-2 text-xs text-destructive">Permissão negada. Habilite nas configurações do navegador/celular.</p>
+              )}
+              {notifEnabled && (
+                <button
+                  onClick={handleTest}
+                  disabled={notifTesting}
+                  className="mt-3 inline-flex items-center gap-2 rounded-lg border border-border bg-secondary px-3 py-1.5 text-xs font-semibold text-secondary-foreground hover:bg-secondary/80 disabled:opacity-50"
+                >
+                  <Bell className="h-3.5 w-3.5" /> {notifTesting ? 'Testando…' : 'Testar notificação'}
+                </button>
+              )}
+              {notifMsg && <p className="mt-2 text-xs text-muted-foreground">{notifMsg}</p>}
+              <p className="mt-3 text-[11px] text-muted-foreground leading-snug">
+                Funciona com o app aberto (mesmo em segundo plano ou offline). No iPhone, instale como aplicativo (Tela de Início) para receber notificações.
+              </p>
+            </div>
+          </div>
+        </section>
+      )}
+
 
       {/* Daily hours */}
       <section className="mb-6 rounded-xl bg-card border border-border p-4">

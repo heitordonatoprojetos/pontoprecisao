@@ -303,8 +303,10 @@ export async function deletePunch(id: string): Promise<void> {
   await supabase.from('punches').delete().eq('id', id);
 }
 
-export async function updatePunch(id: string, timestamp: number): Promise<void> {
-  await supabase.from('punches').update({ timestamp }).eq('id', id);
+export async function updatePunch(id: string, timestamp: number, type?: 'in' | 'out'): Promise<void> {
+  const patch: { timestamp: number; type?: 'in' | 'out' } = { timestamp };
+  if (type) patch.type = type;
+  await supabase.from('punches').update(patch).eq('id', id);
 }
 
 export async function addPunch(userId: string, punch: { timestamp: number; type: 'in' | 'out'; date: string }): Promise<void> {

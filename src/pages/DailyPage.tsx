@@ -11,6 +11,7 @@ export default function DailyPage() {
   const { settings } = useSettings();
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editTime, setEditTime] = useState('');
+  const [editType, setEditType] = useState<'in' | 'out'>('in');
   const [showAdd, setShowAdd] = useState(false);
   const [addTime, setAddTime] = useState('');
   const [addType, setAddType] = useState<'in' | 'out'>('in');
@@ -45,19 +46,22 @@ export default function DailyPage() {
     await load();
   };
 
-  const handleEdit = async (p: Punch) => {
-    if (editingId === p.id) {
-      const [h, m] = editTime.split(':').map(Number);
-      const d = new Date(p.timestamp);
-      d.setHours(h, m, 0, 0);
-      await updatePunch(p.id, d.getTime());
-      setEditingId(null);
-      await load();
-    } else {
-      setEditingId(p.id);
-      setEditTime(new Date(p.timestamp).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' }));
-    }
+  const startEdit = (p: Punch) => {
+    setEditingId(p.id);
+    setEditTime(new Date(p.timestamp).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' }));
+    setEditType(p.type);
   };
+
+  const saveEdit = async (p: Punch) => {
+    const [h, m] = editTime.split(':').map(Number);
+    const d = new Date(p.timestamp);
+    d.setHours(h, m, 0, 0);
+    await updatePunch(p.id, d.getTime(), editType);
+    setEditingId(null);
+    await load();
+  };
+
+  const cancelEdit = () => setEditingId(null);
 
   const handleAdd = async () => {
     if (!addTime || !user) return;
@@ -127,29 +131,54 @@ export default function DailyPage() {
 
         {punches.length === 0 && <p className="py-8 text-center text-sm text-muted-foreground">Nenhuma batida registrada</p>}
 
-        {punches.map((p) => (
-          <div key={p.id} className="flex items-center justify-between rounded-xl bg-card border border-border px-4 py-3">
-            <div className="flex items-center gap-3">
-              <span className={`h-2 w-2 rounded-full ${p.type === 'in' ? 'bg-primary' : 'bg-destructive'}`} />
-              {editingId === p.id ? (
-                <input type="time" value={editTime} onChange={e => setEditTime(e.target.value)} className="rounded-lg border border-input bg-background px-2 py-1 text-sm" />
+        {punches.map((p) => {
+          const isEditing = editingId === p.id;
+          return (
+            <div key={p.id} className="rounded-xl bg-card border border-border px-4 py-3">
+              {isEditing ? (
+                <div className="flex flex-wrap items-center gap-2">
+                  <span className={`h-2 w-2 rounded-full ${editType === 'in' ? 'bg-primary' : 'bg-destructive'}`} />
+                  <input
+                    type="time"
+                    value={editTime}
+                    onChange={e => setEditTime(e.target.value)}
+                    className="rounded-lg border border-input bg-background px-2 py-1.5 text-sm"
+                  />
+                  <select
+                    value={editType}
+                    onChange={e => setEditType(e.target.value as 'in' | 'out')}
+                    className="rounded-lg border border-input bg-background px-2 py-1.5 text-sm"
+                  >
+                    <option value="in">Entrada</option>
+                    <option value="out">Saída</option>
+                  </select>
+                  <div className="ml-auto flex items-center gap-1">
+                    <button onClick={() => saveEdit(p)} className="rounded-lg bg-primary px-3 py-1.5 text-xs font-semibold text-primary-foreground">Salvar</button>
+                    <button onClick={cancelEdit} className="rounded-lg px-2 py-1.5 text-xs text-muted-foreground hover:bg-secondary">Cancelar</button>
+                  </div>
+                </div>
               ) : (
-                <span className="font-medium tabular-nums">
-                  {new Date(p.timestamp).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}
-                </span>
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-3">
+                    <span className={`h-2 w-2 rounded-full ${p.type === 'in' ? 'bg-primary' : 'bg-destructive'}`} />
+                    <span className="font-medium tabular-nums">
+                      {new Date(p.timestamp).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}
+                    </span>
+                    <span className="text-xs text-muted-foreground">{p.type === 'in' ? 'Entrada' : 'Saída'}</span>
+                  </div>
+                  <div className="flex items-center gap-1">
+                    <button onClick={() => startEdit(p)} className="rounded-lg p-2 text-muted-foreground hover:text-foreground" aria-label="Editar batida">
+                      <Pencil className="h-4 w-4" />
+                    </button>
+                    <button onClick={() => handleDelete(p.id)} className="rounded-lg p-2 text-muted-foreground hover:text-destructive" aria-label="Excluir batida">
+                      <Trash2 className="h-4 w-4" />
+                    </button>
+                  </div>
+                </div>
               )}
-              <span className="text-xs text-muted-foreground">{p.type === 'in' ? 'Entrada' : 'Saída'}</span>
             </div>
-            <div className="flex items-center gap-1">
-              <button onClick={() => handleEdit(p)} className="rounded-lg p-2 text-muted-foreground hover:text-foreground">
-                <Pencil className="h-4 w-4" />
-              </button>
-              <button onClick={() => handleDelete(p.id)} className="rounded-lg p-2 text-muted-foreground hover:text-destructive">
-                <Trash2 className="h-4 w-4" />
-              </button>
-            </div>
-          </div>
-        ))}
+          );
+        })}
       </div>
     </div>
   );
