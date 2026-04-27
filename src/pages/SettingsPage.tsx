@@ -1,10 +1,17 @@
-import { useState } from 'react';
-import { Save, Plus, Trash2, Clock, LogOut, AlertCircle, RefreshCw } from 'lucide-react';
+import { useEffect, useState } from 'react';
+import { Save, Plus, Trash2, Clock, LogOut, AlertCircle, RefreshCw, Bell, BellOff } from 'lucide-react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { useSettings } from '@/hooks/useDB';
 import { useAuth } from '@/contexts/AuthContext';
 import type { AppSettings } from '@/hooks/useDB';
 import { APP_FULL_VERSION } from '@/lib/version';
+import {
+  isNotificationsEnabled,
+  setNotificationsEnabled,
+  requestNotificationPermission,
+  testNotification,
+  clearReminder,
+} from '@/lib/punchReminder';
 
 const WEEKDAYS = ['Dom', 'Seg', 'Ter', 'Qua', 'Qui', 'Sex', 'Sáb'];
 const MIN_PUNCHES = 6;
@@ -54,6 +61,42 @@ export default function SettingsPage() {
     setLocal(settings);
     setSynced(true);
   }
+
+  // Notifications local state (per-device)
+  const [notifEnabled, setNotifEnabled] = useState<boolean>(isNotificationsEnabled());
+  const [notifPerm, setNotifPerm] = useState<NotificationPermission | 'unsupported'>(
+    typeof Notification === 'undefined' ? 'unsupported' : Notification.permission,
+  );
+  const [notifTesting, setNotifTesting] = useState(false);
+  const [notifMsg, setNotifMsg] = useState<string | null>(null);
+
+  useEffect(() => { setNotifEnabled(isNotificationsEnabled()); }, []);
+
+  const toggleNotif = async () => {
+    if (notifEnabled) {
+      setNotificationsEnabled(false);
+      setNotifEnabled(false);
+      clearReminder();
+      setNotifMsg('Notificações desativadas.');
+      return;
+    }
+    const perm = await requestNotificationPermission();
+    setNotifPerm(perm);
+    if (perm !== 'granted') {
+      setNotifMsg('Permissão negada. Habilite nas configurações do navegador/celular.');
+      return;
+    }
+    setNotificationsEnabled(true);
+    setNotifEnabled(true);
+    setNotifMsg('Ativado! Você receberá um aviso 1 min antes de cada batida.');
+  };
+
+  const handleTest = async () => {
+    setNotifTesting(true);
+    const ok = await testNotification();
+    setNotifMsg(ok ? 'Notificação enviada!' : 'Permissão negada.');
+    setNotifTesting(false);
+  };
 
   const setDailyHours = (h: number, m: number) => {
     setLocal(s => ({ ...s, dailyHours: h * 60 + m }));
