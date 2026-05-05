@@ -329,7 +329,10 @@ export default function SettingsPage() {
       {!onboarding && (
         <section className="rounded-xl bg-card border border-border p-4">
           <p className="text-xs text-muted-foreground mb-2">Conta: {user?.email}</p>
-          <button onClick={signOut} className="flex items-center gap-2 text-sm text-destructive font-medium">
+          <button
+            onClick={() => { if (confirm('Deseja realmente sair da conta?')) signOut(); }}
+            className="flex items-center gap-2 text-sm text-destructive font-medium"
+          >
             <LogOut className="h-4 w-4" /> Sair
           </button>
         </section>

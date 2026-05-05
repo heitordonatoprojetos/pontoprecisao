@@ -117,9 +117,17 @@ export default function BankPage() {
     const totalMins = (parseInt(hours || '0') * 60) + parseInt(mins || '0');
     if (totalMins <= 0) return;
     const final = showForm === 'debit' ? -totalMins : totalMins;
+    const label = showForm === 'credit' ? 'abono' : 'débito';
+    const confirmMsg = `Confirmar ${label} de ${Math.floor(totalMins / 60)}h${String(totalMins % 60).padStart(2, '0')} no banco de horas?`;
+    if (!confirm(confirmMsg)) return;
     await add(final, desc || (showForm === 'credit' ? 'Abono' : 'Débito'));
     setShowForm(null);
     setHours(''); setMins(''); setDesc('');
+  };
+
+  const handleRemoveAdjustment = async (id: string) => {
+    if (!confirm('Excluir este ajuste do banco de horas?')) return;
+    await remove(id);
   };
 
   const openMark = (date: string) => {
@@ -336,7 +344,7 @@ export default function BankPage() {
               <span className={`text-sm font-bold tabular-nums ${a.minutes >= 0 ? 'text-success' : 'text-destructive'}`}>
                 {a.minutes > 0 ? '+' : ''}{formatMinutes(a.minutes)}
               </span>
-              <button onClick={() => remove(a.id)} className="rounded-lg p-1.5 text-muted-foreground hover:text-destructive">
+              <button onClick={() => handleRemoveAdjustment(a.id)} className="rounded-lg p-1.5 text-muted-foreground hover:text-destructive">
                 <Trash2 className="h-4 w-4" />
               </button>
             </div>
