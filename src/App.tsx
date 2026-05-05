@@ -7,6 +7,8 @@ import { TooltipProvider } from "@/components/ui/tooltip";
 import { AuthProvider, useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/integrations/supabase/client";
 import BottomNav from "@/components/BottomNav";
+import TopNav from "@/components/TopNav";
+import UpdateBanner from "@/components/UpdateBanner";
 import InstallPrompt from "@/components/InstallPrompt";
 import HomePage from "@/pages/HomePage";
 import DailyPage from "@/pages/DailyPage";
