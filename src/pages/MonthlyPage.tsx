@@ -1,10 +1,13 @@
 import { useState, useMemo } from 'react';
-import { ChevronLeft, ChevronRight } from 'lucide-react';
-import { useAllPunches, useSettings, calculateWorkedMinutes, formatMinutes, type Punch } from '@/hooks/useDB';
+import { ChevronLeft, ChevronRight, Trash2 } from 'lucide-react';
+import { useAllPunches, useSettings, calculateWorkedMinutes, formatMinutes, deleteMonthData, type Punch } from '@/hooks/useDB';
+import { useAuth } from '@/contexts/AuthContext';
 
 export default function MonthlyPage() {
-  const { punches } = useAllPunches();
+  const { user } = useAuth();
+  const { punches, refresh } = useAllPunches();
   const { settings } = useSettings();
+
   const [month, setMonth] = useState(() => {
     const d = new Date();
     return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`;
