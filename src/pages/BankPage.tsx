@@ -5,6 +5,7 @@ import autoTable from 'jspdf-autotable';
 import * as XLSX from 'xlsx';
 import { useAdjustments, useAllPunches, useSettings, calculateWorkedMinutes, formatMinutes } from '@/hooks/useDB';
 
+
 interface DayRow {
   date: string;            // YYYY-MM-DD
   dateFmt: string;         // dd/mm/aaaa
