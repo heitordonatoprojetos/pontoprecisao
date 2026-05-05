@@ -306,14 +306,14 @@ export default function BankPage() {
       {/* Export buttons */}
       <div className="mb-6 flex gap-3">
         <button
-          onClick={exportPDF}
+          onClick={() => openExport('pdf')}
           disabled={dayRows.length === 0}
           className="flex flex-1 items-center justify-center gap-2 rounded-xl border border-border bg-secondary py-3 text-sm font-semibold text-secondary-foreground hover:bg-secondary/80 disabled:opacity-50"
         >
           <FileDown className="h-4 w-4" /> Baixar PDF
         </button>
         <button
-          onClick={exportXLSX}
+          onClick={() => openExport('xlsx')}
           disabled={dayRows.length === 0}
           className="flex flex-1 items-center justify-center gap-2 rounded-xl border border-border bg-secondary py-3 text-sm font-semibold text-secondary-foreground hover:bg-secondary/80 disabled:opacity-50"
         >
