@@ -16,15 +16,35 @@ export default function HomePage() {
   const { user } = useAuth();
   const { punches, punch, refresh } = useTodayPunches();
   const { settings } = useSettings();
-  const [, setTick] = useState(0);
+  const [now, setNow] = useState(() => new Date());
   const [justPunched, setJustPunched] = useState(false);
   const [showManual, setShowManual] = useState(false);
   const [manualTime, setManualTime] = useState('');
   const [manualSaving, setManualSaving] = useState(false);
 
+  // Tick segundo-a-segundo (alinhado ao próximo segundo cheio).
+  // Não exibimos os segundos — mas isso garante que minuto vire imediatamente.
   useEffect(() => {
-    const iv = setInterval(() => setTick(t => t + 1), 10000);
-    return () => clearInterval(iv);
+    let timer: ReturnType<typeof setTimeout>;
+    const tick = () => {
+      const d = new Date();
+      setNow(d);
+      timer = setTimeout(tick, 1000 - (d.getTime() % 1000));
+    };
+    tick();
+    const onVisible = () => {
+      if (document.visibilityState === 'visible') {
+        clearTimeout(timer);
+        tick();
+      }
+    };
+    document.addEventListener('visibilitychange', onVisible);
+    window.addEventListener('focus', onVisible);
+    return () => {
+      clearTimeout(timer);
+      document.removeEventListener('visibilitychange', onVisible);
+      window.removeEventListener('focus', onVisible);
+    };
   }, []);
 
   const lastPunch = punches.length > 0 ? punches[punches.length - 1] : null;
@@ -48,9 +68,9 @@ export default function HomePage() {
   const nextType = !lastPunch || lastPunch.type === 'out' ? 'in' : 'out';
 
   const openManual = () => {
-    const now = new Date();
+    const d = new Date();
     setManualTime(
-      `${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}`,
+      `${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}`,
     );
     setShowManual(true);
   };
@@ -73,103 +93,215 @@ export default function HomePage() {
     setManualSaving(false);
   };
 
+  const dateLabel = now.toLocaleDateString('pt-BR', { weekday: 'long', day: 'numeric', month: 'long' });
+  const timeLabel = now.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
+
   return (
-    <div className="flex min-h-screen flex-col items-center px-4 pb-24 pt-12">
-      {/* Clock */}
-      <div className="mb-2 text-center">
-        <p className="text-sm font-medium text-muted-foreground">
-          {new Date().toLocaleDateString('pt-BR', { weekday: 'long', day: 'numeric', month: 'long' })}
-        </p>
-        <p className="mt-1 text-5xl font-bold tracking-tight text-foreground tabular-nums">
-          {new Date().toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}
-        </p>
+    <div className="flex min-h-screen flex-col items-center px-4 pb-24 pt-12 lg:px-8 lg:pb-12 lg:pt-10">
+      {/* === DESKTOP LAYOUT === */}
+      <div className="hidden w-full max-w-7xl lg:block">
+        <div className="grid grid-cols-3 gap-8">
+          <div className="col-span-2 space-y-8">
+            {/* Hero card */}
+            <div className="relative flex flex-col items-center rounded-3xl border border-border bg-card p-10 shadow-sm">
+              <p className="text-base font-medium capitalize text-muted-foreground">{dateLabel}</p>
+              <p className="mt-2 text-7xl font-bold tracking-tight tabular-nums text-foreground">{timeLabel}</p>
+              <div className="mt-5 flex flex-wrap items-center justify-center gap-2">
+                <div className={`inline-flex items-center gap-2 rounded-full px-4 py-1.5 text-sm font-medium ${
+                  isWorking ? 'bg-accent text-accent-foreground' : 'bg-secondary text-secondary-foreground'
+                }`}>
+                  <span className={`h-2 w-2 rounded-full ${isWorking ? 'bg-primary animate-pulse' : 'bg-muted-foreground'}`} />
+                  {isWorking ? 'Trabalhando' : 'Fora'}
+                </div>
+                {nextExpectedPunch && (
+                  <div className="inline-flex items-center gap-1.5 rounded-full bg-muted px-4 py-1.5 text-sm font-medium text-muted-foreground">
+                    <span>Próxima:</span>
+                    <span className="font-semibold tabular-nums text-foreground">{nextExpectedPunch}</span>
+                  </div>
+                )}
+              </div>
+
+              <div className="relative mt-8 flex items-center gap-5">
+                <AnimatePresence>
+                  {justPunched && (
+                    <motion.div
+                      className="absolute left-[88px] top-1/2 h-44 w-44 -translate-x-1/2 -translate-y-1/2 rounded-full bg-primary/30"
+                      initial={{ scale: 1, opacity: 0.6 }}
+                      animate={{ scale: 2.5, opacity: 0 }}
+                      exit={{ opacity: 0 }}
+                      transition={{ duration: 0.8 }}
+                    />
+                  )}
+                </AnimatePresence>
+                <motion.button
+                  whileTap={{ scale: 0.94 }}
+                  whileHover={{ scale: 1.02 }}
+                  onClick={handlePunch}
+                  aria-label={`Bater ${nextType === 'in' ? 'entrada' : 'saída'} agora`}
+                  className={`relative z-10 flex h-44 w-44 flex-col items-center justify-center rounded-full font-bold shadow-xl transition-all ${
+                    nextType === 'in'
+                      ? 'bg-primary text-primary-foreground shadow-primary/30 hover:shadow-primary/40'
+                      : 'bg-destructive text-destructive-foreground shadow-destructive/30 hover:shadow-destructive/40'
+                  }`}
+                  style={{ textShadow: '0 1px 2px rgba(0,0,0,0.15)' }}
+                >
+                  {nextType === 'in' ? <LogIn className="mb-2 h-10 w-10 drop-shadow" /> : <LogOut className="mb-2 h-10 w-10 drop-shadow" />}
+                  <span className="text-lg font-bold tracking-wide">{nextType === 'in' ? 'Entrada' : 'Saída'}</span>
+                </motion.button>
+
+                <motion.button
+                  whileTap={{ scale: 0.92 }}
+                  whileHover={{ scale: 1.05 }}
+                  onClick={openManual}
+                  aria-label="Bater com horário customizado"
+                  className="relative z-10 flex h-20 w-20 flex-col items-center justify-center gap-1 rounded-full border border-border bg-card text-foreground shadow-md transition-colors hover:bg-secondary"
+                >
+                  <Pencil className="h-5 w-5" />
+                  <span className="text-[10px] font-medium text-muted-foreground">Manual</span>
+                </motion.button>
+              </div>
+
+              {lastPunch && (
+                <p className="mt-6 text-sm text-muted-foreground">
+                  Última batida: <span className="font-medium text-foreground tabular-nums">
+                    {new Date(lastPunch.timestamp).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}
+                  </span> ({lastPunch.type === 'in' ? 'Entrada' : 'Saída'})
+                </p>
+              )}
+            </div>
+
+            {/* Stats grid */}
+            <div className="grid grid-cols-3 gap-5">
+              <StatCard label="Trabalhado" value={formatMinutes(worked)} />
+              <StatCard label="Esperado" value={formatMinutes(expected)} />
+              <StatCard label="Saldo" value={formatMinutes(balance)} variant={balance >= 0 ? 'positive' : 'negative'} />
+            </div>
+          </div>
+
+          {/* Sidebar — histórico de hoje */}
+          <aside className="rounded-3xl border border-border bg-card p-6 shadow-sm">
+            <p className="mb-4 text-base font-bold text-foreground">Batidas de hoje</p>
+            {punches.length === 0 ? (
+              <p className="py-12 text-center text-sm text-muted-foreground">Nenhuma batida ainda</p>
+            ) : (
+              <ul className="space-y-2">
+                {punches.map((p, i) => (
+                  <li key={p.id} className="flex items-center justify-between rounded-xl border border-border/60 bg-background/50 px-3 py-2.5">
+                    <div className="flex items-center gap-3">
+                      <span className={`flex h-8 w-8 items-center justify-center rounded-full text-xs font-bold ${
+                        p.type === 'in' ? 'bg-accent text-accent-foreground' : 'bg-secondary text-secondary-foreground'
+                      }`}>
+                        {i + 1}
+                      </span>
+                      <div>
+                        <p className="text-sm font-semibold tabular-nums">
+                          {new Date(p.timestamp).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}
+                        </p>
+                        <p className="text-[11px] text-muted-foreground">{p.type === 'in' ? 'Entrada' : 'Saída'}</p>
+                      </div>
+                    </div>
+                    {p.type === 'in' ? <LogIn className="h-4 w-4 text-primary" /> : <LogOut className="h-4 w-4 text-destructive" />}
+                  </li>
+                ))}
+              </ul>
+            )}
+            {nextExpectedPunch && (
+              <div className="mt-5 rounded-xl bg-primary/5 border border-primary/20 p-3">
+                <p className="text-xs uppercase tracking-wide text-muted-foreground">Próxima esperada</p>
+                <p className="mt-0.5 text-2xl font-bold tabular-nums text-primary">{nextExpectedPunch}</p>
+              </div>
+            )}
+          </aside>
+        </div>
       </div>
 
-      {/* Status badge + próxima batida */}
-      <div className="mt-4 flex flex-wrap items-center justify-center gap-2">
-        <div className={`inline-flex items-center gap-2 rounded-full px-4 py-1.5 text-sm font-medium ${
-          isWorking ? 'bg-accent text-accent-foreground' : 'bg-secondary text-secondary-foreground'
-        }`}>
-          <span className={`h-2 w-2 rounded-full ${isWorking ? 'bg-primary animate-pulse' : 'bg-muted-foreground'}`} />
-          {isWorking ? 'Trabalhando' : 'Fora'}
+      {/* === MOBILE LAYOUT (intacto) === */}
+      <div className="flex w-full flex-col items-center lg:hidden">
+        <div className="mb-2 text-center">
+          <p className="text-sm font-medium text-muted-foreground">{dateLabel}</p>
+          <p className="mt-1 text-5xl font-bold tracking-tight text-foreground tabular-nums">{timeLabel}</p>
         </div>
-        {nextExpectedPunch && (
-          <div className="inline-flex items-center gap-1.5 rounded-full bg-muted px-4 py-1.5 text-sm font-medium text-muted-foreground">
-            <span className="text-xs">Próxima:</span>
-            <span className="tabular-nums text-foreground font-semibold">{nextExpectedPunch}</span>
+
+        <div className="mt-4 flex flex-wrap items-center justify-center gap-2">
+          <div className={`inline-flex items-center gap-2 rounded-full px-4 py-1.5 text-sm font-medium ${
+            isWorking ? 'bg-accent text-accent-foreground' : 'bg-secondary text-secondary-foreground'
+          }`}>
+            <span className={`h-2 w-2 rounded-full ${isWorking ? 'bg-primary animate-pulse' : 'bg-muted-foreground'}`} />
+            {isWorking ? 'Trabalhando' : 'Fora'}
+          </div>
+          {nextExpectedPunch && (
+            <div className="inline-flex items-center gap-1.5 rounded-full bg-muted px-4 py-1.5 text-sm font-medium text-muted-foreground">
+              <span className="text-xs">Próxima:</span>
+              <span className="tabular-nums text-foreground font-semibold">{nextExpectedPunch}</span>
+            </div>
+          )}
+        </div>
+
+        <div className="relative mt-10 flex items-center gap-4">
+          <AnimatePresence>
+            {justPunched && (
+              <motion.div
+                className="absolute left-1/2 top-1/2 h-36 w-36 -translate-x-1/2 -translate-y-1/2 rounded-full bg-primary/30"
+                initial={{ scale: 1, opacity: 0.6 }}
+                animate={{ scale: 2.5, opacity: 0 }}
+                exit={{ opacity: 0 }}
+                transition={{ duration: 0.8 }}
+              />
+            )}
+          </AnimatePresence>
+          <motion.button
+            whileTap={{ scale: 0.92 }}
+            onClick={handlePunch}
+            aria-label="Bater ponto agora"
+            className={`relative z-10 flex h-36 w-36 flex-col items-center justify-center rounded-full shadow-lg transition-colors ${
+              nextType === 'in'
+                ? 'bg-primary text-primary-foreground'
+                : 'bg-destructive text-destructive-foreground'
+            }`}
+          >
+            {nextType === 'in' ? <LogIn className="mb-1 h-8 w-8" /> : <LogOut className="mb-1 h-8 w-8" />}
+            <span className="text-sm font-semibold">{nextType === 'in' ? 'Entrada' : 'Saída'}</span>
+          </motion.button>
+
+          <motion.button
+            whileTap={{ scale: 0.92 }}
+            onClick={openManual}
+            aria-label="Bater com horário customizado"
+            className="relative z-10 flex h-16 w-16 flex-col items-center justify-center rounded-full border border-border bg-card text-foreground shadow-md transition-colors hover:bg-secondary"
+          >
+            <Pencil className="h-5 w-5" />
+          </motion.button>
+        </div>
+
+        <div className="mt-10 grid w-full max-w-sm grid-cols-3 gap-3">
+          <StatCard label="Trabalhado" value={formatMinutes(worked)} />
+          <StatCard label="Esperado" value={formatMinutes(expected)} />
+          <StatCard label="Saldo" value={formatMinutes(balance)} variant={balance >= 0 ? 'positive' : 'negative'} />
+        </div>
+
+        {lastPunch && (
+          <p className="mt-6 text-sm text-muted-foreground">
+            Última batida: {new Date(lastPunch.timestamp).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}
+            {' '}({lastPunch.type === 'in' ? 'Entrada' : 'Saída'})
+          </p>
+        )}
+
+        {punches.length > 0 && (
+          <div className="mt-6 w-full max-w-sm">
+            <p className="mb-2 text-xs font-medium text-muted-foreground uppercase tracking-wide">Batidas de hoje</p>
+            <div className="flex flex-wrap gap-2">
+              {punches.map((p) => (
+                <span key={p.id} className={`inline-flex items-center gap-1 rounded-lg px-3 py-1.5 text-sm font-medium ${
+                  p.type === 'in' ? 'bg-accent text-accent-foreground' : 'bg-secondary text-secondary-foreground'
+                }`}>
+                  {p.type === 'in' ? <LogIn className="h-3 w-3" /> : <LogOut className="h-3 w-3" />}
+                  {new Date(p.timestamp).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}
+                </span>
+              ))}
+            </div>
           </div>
         )}
       </div>
-
-      {/* Punch buttons */}
-      <div className="relative mt-10 flex items-center gap-4">
-        {/* Pulse ring */}
-        <AnimatePresence>
-          {justPunched && (
-            <motion.div
-              className="absolute left-1/2 top-1/2 h-36 w-36 -translate-x-1/2 -translate-y-1/2 rounded-full bg-primary/30"
-              initial={{ scale: 1, opacity: 0.6 }}
-              animate={{ scale: 2.5, opacity: 0 }}
-              exit={{ opacity: 0 }}
-              transition={{ duration: 0.8 }}
-            />
-          )}
-        </AnimatePresence>
-        <motion.button
-          whileTap={{ scale: 0.92 }}
-          onClick={handlePunch}
-          aria-label="Bater ponto agora"
-          className={`relative z-10 flex h-36 w-36 flex-col items-center justify-center rounded-full shadow-lg transition-colors ${
-            nextType === 'in'
-              ? 'bg-primary text-primary-foreground'
-              : 'bg-destructive text-destructive-foreground'
-          }`}
-        >
-          {nextType === 'in' ? <LogIn className="mb-1 h-8 w-8" /> : <LogOut className="mb-1 h-8 w-8" />}
-          <span className="text-sm font-semibold">{nextType === 'in' ? 'Entrada' : 'Saída'}</span>
-        </motion.button>
-
-        <motion.button
-          whileTap={{ scale: 0.92 }}
-          onClick={openManual}
-          aria-label="Bater com horário customizado"
-          className="relative z-10 flex h-16 w-16 flex-col items-center justify-center rounded-full border border-border bg-card text-foreground shadow-md transition-colors hover:bg-secondary"
-        >
-          <Pencil className="h-5 w-5" />
-        </motion.button>
-      </div>
-
-      {/* Stats */}
-      <div className="mt-10 grid w-full max-w-sm grid-cols-3 gap-3">
-        <StatCard label="Trabalhado" value={formatMinutes(worked)} />
-        <StatCard label="Esperado" value={formatMinutes(expected)} />
-        <StatCard label="Saldo" value={formatMinutes(balance)} variant={balance >= 0 ? 'positive' : 'negative'} />
-      </div>
-
-      {/* Last punch */}
-      {lastPunch && (
-        <p className="mt-6 text-sm text-muted-foreground">
-          Última batida: {new Date(lastPunch.timestamp).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}
-          {' '}({lastPunch.type === 'in' ? 'Entrada' : 'Saída'})
-        </p>
-      )}
-
-      {/* Today's punches */}
-      {punches.length > 0 && (
-        <div className="mt-6 w-full max-w-sm">
-          <p className="mb-2 text-xs font-medium text-muted-foreground uppercase tracking-wide">Batidas de hoje</p>
-          <div className="flex flex-wrap gap-2">
-            {punches.map((p) => (
-              <span key={p.id} className={`inline-flex items-center gap-1 rounded-lg px-3 py-1.5 text-sm font-medium ${
-                p.type === 'in' ? 'bg-accent text-accent-foreground' : 'bg-secondary text-secondary-foreground'
-              }`}>
-                {p.type === 'in' ? <LogIn className="h-3 w-3" /> : <LogOut className="h-3 w-3" />}
-                {new Date(p.timestamp).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}
-              </span>
-            ))}
-          </div>
-        </div>
-      )}
 
       {/* Manual punch modal */}
       {showManual && (
@@ -216,9 +348,9 @@ export default function HomePage() {
 
 function StatCard({ label, value, variant }: { label: string; value: string; variant?: 'positive' | 'negative' }) {
   return (
-    <div className="rounded-xl bg-card p-3 text-center shadow-sm border border-border">
-      <p className="text-xs text-muted-foreground">{label}</p>
-      <p className={`mt-1 text-lg font-bold tabular-nums ${
+    <div className="rounded-xl bg-card p-3 text-center shadow-sm border border-border lg:p-5">
+      <p className="text-xs text-muted-foreground lg:text-sm">{label}</p>
+      <p className={`mt-1 text-lg font-bold tabular-nums lg:text-3xl lg:mt-2 ${
         variant === 'positive' ? 'text-success' : variant === 'negative' ? 'text-destructive' : 'text-foreground'
       }`}>{value}</p>
     </div>
