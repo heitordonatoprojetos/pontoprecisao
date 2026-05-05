@@ -148,17 +148,47 @@ export default function BankPage() {
     setMarkSaving(false);
   };
 
-  const exportPDF = () => {
+  /** Lista de meses disponíveis (YYYY-MM) com base nas batidas + ajustes. */
+  const availableMonths = useMemo(() => {
+    const set = new Set<string>();
+    dayRows.forEach(r => set.add(r.date.slice(0, 7)));
+    adjustments.forEach(a => set.add(a.date.slice(0, 7)));
+    return Array.from(set).sort().reverse();
+  }, [dayRows, adjustments]);
+
+  const monthLabel = (ym: string) =>
+    new Date(ym + '-01T12:00:00').toLocaleDateString('pt-BR', { month: 'long', year: 'numeric' });
+
+  const openExport = (kind: 'pdf' | 'xlsx') => {
+    setSelectedMonths(availableMonths.slice(0, 1));
+    setExportPicker(kind);
+  };
+
+  const toggleMonth = (m: string) => {
+    setSelectedMonths(prev => prev.includes(m) ? prev.filter(x => x !== m) : [...prev, m]);
+  };
+
+  const filteredRows = (months: string[]) =>
+    months.length === 0 ? dayRows : dayRows.filter(r => months.includes(r.date.slice(0, 7)));
+  const filteredAdj = (months: string[]) =>
+    months.length === 0 ? adjustments : adjustments.filter(a => months.includes(a.date.slice(0, 7)));
+
+  const exportPDF = (months: string[]) => {
+    const rows = filteredRows(months);
+    const adj = filteredAdj(months);
+    const total = rows.reduce((s, r) => s + r.balance, 0);
     const doc = new jsPDF();
     doc.setFontSize(16);
     doc.text('Banco de Horas - Relatório', 14, 18);
     doc.setFontSize(10);
-    doc.text(`Saldo total: ${totalBalance > 0 ? '+' : ''}${formatMinutes(totalBalance)}`, 14, 26);
-    doc.text(`Gerado em: ${new Date().toLocaleString('pt-BR')}`, 14, 32);
+    const periodo = months.length === 0 ? 'Todos os períodos' : months.map(monthLabel).join(', ');
+    doc.text(`Período: ${periodo}`, 14, 26);
+    doc.text(`Saldo do período: ${total > 0 ? '+' : ''}${formatMinutes(total)}`, 14, 32);
+    doc.text(`Gerado em: ${new Date().toLocaleString('pt-BR')}`, 14, 38);
     autoTable(doc, {
-      startY: 38,
+      startY: 44,
       head: [['Data', 'Batidas', 'Trabalhado', 'Esperado', 'Ajuste', 'Saldo']],
-      body: dayRows.map(r => [
+      body: rows.map(r => [
         r.dateFmt,
         r.hasPunches ? r.punchTimes.join(' | ') : (r.adjDescriptions.length ? r.adjDescriptions.join(', ') : '—'),
         formatMinutes(r.worked),
@@ -169,10 +199,10 @@ export default function BankPage() {
       styles: { fontSize: 8 },
       headStyles: { fillColor: [37, 99, 235] },
     });
-    if (adjustments.length > 0) {
+    if (adj.length > 0) {
       autoTable(doc, {
         head: [['Data', 'Descrição', 'Minutos']],
-        body: adjustments.map(a => [
+        body: adj.map(a => [
           new Date(a.date + 'T12:00:00').toLocaleDateString('pt-BR'),
           a.description,
           (a.minutes > 0 ? '+' : '') + formatMinutes(a.minutes),
@@ -184,9 +214,11 @@ export default function BankPage() {
     doc.save(`banco-horas-${new Date().toISOString().split('T')[0]}.pdf`);
   };
 
-  const exportXLSX = () => {
+  const exportXLSX = (months: string[]) => {
+    const rows = filteredRows(months);
+    const adj = filteredAdj(months);
     const wb = XLSX.utils.book_new();
-    const ws = XLSX.utils.json_to_sheet(dayRows.map(r => ({
+    const ws = XLSX.utils.json_to_sheet(rows.map(r => ({
       Data: r.dateFmt,
       Batidas: r.hasPunches ? r.punchTimes.join(' | ') : '',
       Ajuste: r.adjDescriptions.join(', '),
@@ -196,8 +228,8 @@ export default function BankPage() {
       Saldo: (r.balance > 0 ? '+' : '') + formatMinutes(r.balance),
     })));
     XLSX.utils.book_append_sheet(wb, ws, 'Dias');
-    if (adjustments.length > 0) {
-      const wsAdj = XLSX.utils.json_to_sheet(adjustments.map(a => ({
+    if (adj.length > 0) {
+      const wsAdj = XLSX.utils.json_to_sheet(adj.map(a => ({
         Data: new Date(a.date + 'T12:00:00').toLocaleDateString('pt-BR'),
         Descrição: a.description,
         Minutos: a.minutes,
@@ -206,6 +238,13 @@ export default function BankPage() {
       XLSX.utils.book_append_sheet(wb, wsAdj, 'Ajustes');
     }
     XLSX.writeFile(wb, `banco-horas-${new Date().toISOString().split('T')[0]}.xlsx`);
+  };
+
+  const confirmExport = () => {
+    if (!exportPicker) return;
+    if (exportPicker === 'pdf') exportPDF(selectedMonths);
+    else exportXLSX(selectedMonths);
+    setExportPicker(null);
   };
 
   return (
