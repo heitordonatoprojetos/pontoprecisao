@@ -71,6 +71,8 @@ function AppRoutes() {
     <>
       <OnboardingGate />
       <ReminderRunner />
+      <UpdateBanner />
+      <TopNav />
       <Routes>
         <Route path="/" element={<HomePage />} />
         <Route path="/diario" element={<DailyPage />} />
@@ -98,7 +100,7 @@ const App = () => (
       <Sonner />
       <BrowserRouter>
         <AuthProvider>
-          <div className="mx-auto max-w-lg">
+          <div className="mx-auto max-w-lg lg:max-w-7xl">
             <AppRoutes />
           </div>
         </AuthProvider>
