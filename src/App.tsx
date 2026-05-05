@@ -7,6 +7,8 @@ import { TooltipProvider } from "@/components/ui/tooltip";
 import { AuthProvider, useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/integrations/supabase/client";
 import BottomNav from "@/components/BottomNav";
+import TopNav from "@/components/TopNav";
+import UpdateBanner from "@/components/UpdateBanner";
 import InstallPrompt from "@/components/InstallPrompt";
 import HomePage from "@/pages/HomePage";
 import DailyPage from "@/pages/DailyPage";
@@ -69,6 +71,8 @@ function AppRoutes() {
     <>
       <OnboardingGate />
       <ReminderRunner />
+      <UpdateBanner />
+      <TopNav />
       <Routes>
         <Route path="/" element={<HomePage />} />
         <Route path="/diario" element={<DailyPage />} />
@@ -96,7 +100,7 @@ const App = () => (
       <Sonner />
       <BrowserRouter>
         <AuthProvider>
-          <div className="mx-auto max-w-lg">
+          <div className="mx-auto max-w-lg lg:max-w-7xl">
             <AppRoutes />
           </div>
         </AuthProvider>

@@ -42,6 +42,7 @@ export default function DailyPage() {
   };
 
   const handleDelete = async (id: string) => {
+    if (!confirm('Excluir esta batida? Esta ação não pode ser desfeita.')) return;
     await deletePunch(id);
     await load();
   };
