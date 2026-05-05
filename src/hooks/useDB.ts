@@ -312,3 +312,14 @@ export async function updatePunch(id: string, timestamp: number, type?: 'in' | '
 export async function addPunch(userId: string, punch: { timestamp: number; type: 'in' | 'out'; date: string }): Promise<void> {
   await supabase.from('punches').insert({ user_id: userId, ...punch });
 }
+
+/** Exclui TODAS as batidas e ajustes de um mês (YYYY-MM) do usuário. */
+export async function deleteMonthData(userId: string, month: string): Promise<void> {
+  const start = `${month}-01`;
+  const [y, m] = month.split('-').map(Number);
+  const lastDay = new Date(y, m, 0).getDate();
+  const end = `${month}-${String(lastDay).padStart(2, '0')}`;
+  await supabase.from('punches').delete().eq('user_id', userId).gte('date', start).lte('date', end);
+  await supabase.from('adjustments').delete().eq('user_id', userId).gte('date', start).lte('date', end);
+}
+
