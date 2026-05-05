@@ -1,10 +1,13 @@
 import { useState, useMemo } from 'react';
-import { ChevronLeft, ChevronRight } from 'lucide-react';
-import { useAllPunches, useSettings, calculateWorkedMinutes, formatMinutes, type Punch } from '@/hooks/useDB';
+import { ChevronLeft, ChevronRight, Trash2 } from 'lucide-react';
+import { useAllPunches, useSettings, calculateWorkedMinutes, formatMinutes, deleteMonthData, type Punch } from '@/hooks/useDB';
+import { useAuth } from '@/contexts/AuthContext';
 
 export default function MonthlyPage() {
-  const { punches } = useAllPunches();
+  const { user } = useAuth();
+  const { punches, refresh } = useAllPunches();
   const { settings } = useSettings();
+
   const [month, setMonth] = useState(() => {
     const d = new Date();
     return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`;
@@ -50,6 +53,14 @@ export default function MonthlyPage() {
 
   const monthLabel = new Date(year, mon - 1).toLocaleDateString('pt-BR', { month: 'long', year: 'numeric' });
 
+  const handleDeleteMonth = async () => {
+    if (!user) return;
+    if (!confirm(`Excluir TODAS as batidas e ajustes de ${monthLabel}? Esta ação não pode ser desfeita.`)) return;
+    if (!confirm('Tem certeza absoluta? Os dados serão removidos permanentemente.')) return;
+    await deleteMonthData(user.id, month);
+    await refresh();
+  };
+
   return (
     <div className="min-h-screen px-4 pb-24 pt-6">
       {/* Month nav */}
@@ -58,6 +69,15 @@ export default function MonthlyPage() {
         <p className="text-lg font-semibold capitalize">{monthLabel}</p>
         <button onClick={nextMonth} className="rounded-lg p-2 text-muted-foreground hover:bg-secondary"><ChevronRight className="h-5 w-5" /></button>
       </div>
+
+      <button
+        onClick={handleDeleteMonth}
+        disabled={daysInMonth.days.length === 0}
+        className="mb-4 flex w-full items-center justify-center gap-2 rounded-xl border border-destructive/40 bg-destructive/10 py-2.5 text-sm font-medium text-destructive hover:bg-destructive/20 disabled:opacity-50"
+      >
+        <Trash2 className="h-4 w-4" /> Excluir mês inteiro
+      </button>
+
 
       {/* Summary */}
       <div className="grid grid-cols-3 gap-3 mb-6">
