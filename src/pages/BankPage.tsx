@@ -42,6 +42,10 @@ export default function BankPage() {
   const [hours, setHours] = useState('');
   const [mins, setMins] = useState('');
   const [desc, setDesc] = useState('');
+  const [showAllDays, setShowAllDays] = useState(false);
+  const [exportPicker, setExportPicker] = useState<null | 'pdf' | 'xlsx'>(null);
+  const [selectedMonths, setSelectedMonths] = useState<string[]>([]);
+
 
   // Modal de marcar dia como feriado/abono
   const [markingDate, setMarkingDate] = useState<string | null>(null);
