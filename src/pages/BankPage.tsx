@@ -321,11 +321,37 @@ export default function BankPage() {
         </button>
       </div>
 
-      {/* Days list */}
-      <p className="mb-2 text-sm font-medium text-muted-foreground">Dias</p>
-      {dayRows.length === 0 && <p className="py-8 text-center text-sm text-muted-foreground">Sem batidas registradas ainda</p>}
+      {/* History (ajustes manuais primeiro - mais relevantes nesta aba) */}
+      <p className="mb-2 text-sm font-medium text-muted-foreground">Ajustes manuais</p>
+      {adjustments.length === 0 && <p className="py-4 text-center text-sm text-muted-foreground">Nenhum ajuste registrado</p>}
       <div className="space-y-2 mb-6">
-        {dayRows.map(r => {
+        {adjustments.map(a => (
+          <div key={a.id} className="flex items-center justify-between rounded-xl bg-card border border-border px-4 py-3">
+            <div className="min-w-0">
+              <p className="text-sm font-medium truncate">{a.description}</p>
+              <p className="text-xs text-muted-foreground">
+                {new Date(a.date + 'T12:00:00').toLocaleDateString('pt-BR')}
+              </p>
+            </div>
+            <div className="flex items-center gap-2 shrink-0">
+              <span className={`text-sm font-bold tabular-nums ${a.minutes >= 0 ? 'text-success' : 'text-destructive'}`}>
+                {a.minutes > 0 ? '+' : ''}{formatMinutes(a.minutes)}
+              </span>
+              <button onClick={() => handleRemoveAdjustment(a.id)} className="rounded-lg p-1.5 text-muted-foreground hover:text-destructive">
+                <Trash2 className="h-4 w-4" />
+              </button>
+            </div>
+          </div>
+        ))}
+      </div>
+
+      {/* Days list (últimos 7 por padrão) */}
+      <p className="mb-2 text-sm font-medium text-muted-foreground">
+        Últimas batidas {!showAllDays && dayRows.length > 7 && <span className="text-xs">(7 mais recentes)</span>}
+      </p>
+      {dayRows.length === 0 && <p className="py-8 text-center text-sm text-muted-foreground">Sem batidas registradas ainda</p>}
+      <div className="space-y-2 mb-3">
+        {(showAllDays ? dayRows : dayRows.slice(0, 7)).map(r => {
           const isToday = r.date === todayStr;
           const missing = r.isWorkDay && !r.hasPunches && r.adjMinutes === 0 && !isToday;
           const balanceColor = r.balance >= 0 ? 'text-success' : 'text-destructive';
@@ -371,30 +397,65 @@ export default function BankPage() {
           );
         })}
       </div>
+      {dayRows.length > 7 && (
+        <button
+          onClick={() => setShowAllDays(s => !s)}
+          className="mb-6 w-full rounded-xl border border-border bg-secondary py-2.5 text-sm font-medium text-secondary-foreground hover:bg-secondary/80"
+        >
+          {showAllDays ? 'Mostrar menos' : `Mostrar mais (${dayRows.length - 7})`}
+        </button>
+      )}
 
-      {/* History */}
-      <p className="mb-2 text-sm font-medium text-muted-foreground">Histórico de ajustes</p>
-      {adjustments.length === 0 && <p className="py-8 text-center text-sm text-muted-foreground">Nenhum ajuste registrado</p>}
-      <div className="space-y-2">
-        {adjustments.map(a => (
-          <div key={a.id} className="flex items-center justify-between rounded-xl bg-card border border-border px-4 py-3">
-            <div className="min-w-0">
-              <p className="text-sm font-medium truncate">{a.description}</p>
-              <p className="text-xs text-muted-foreground">
-                {new Date(a.date + 'T12:00:00').toLocaleDateString('pt-BR')}
+      {/* Modal: escolher meses para relatório */}
+      {exportPicker && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4" onClick={() => setExportPicker(null)}>
+          <div className="w-full max-w-sm rounded-2xl bg-card border border-border p-5 shadow-xl" onClick={e => e.stopPropagation()}>
+            <div className="flex items-center justify-between mb-3">
+              <p className="font-semibold text-base">
+                Escolha os meses ({exportPicker.toUpperCase()})
               </p>
+              <button onClick={() => setExportPicker(null)} className="text-muted-foreground hover:text-foreground" aria-label="Fechar">
+                <X className="h-4 w-4" />
+              </button>
             </div>
-            <div className="flex items-center gap-2 shrink-0">
-              <span className={`text-sm font-bold tabular-nums ${a.minutes >= 0 ? 'text-success' : 'text-destructive'}`}>
-                {a.minutes > 0 ? '+' : ''}{formatMinutes(a.minutes)}
-              </span>
-              <button onClick={() => handleRemoveAdjustment(a.id)} className="rounded-lg p-1.5 text-muted-foreground hover:text-destructive">
-                <Trash2 className="h-4 w-4" />
+            <div className="mb-3 flex gap-2 text-xs">
+              <button onClick={() => setSelectedMonths(availableMonths)} className="rounded-md border border-border px-2 py-1 hover:bg-secondary">Todos</button>
+              <button onClick={() => setSelectedMonths([])} className="rounded-md border border-border px-2 py-1 hover:bg-secondary">Limpar</button>
+            </div>
+            <div className="max-h-72 overflow-y-auto space-y-1">
+              {availableMonths.length === 0 && <p className="text-sm text-muted-foreground">Nenhum mês disponível.</p>}
+              {availableMonths.map(m => (
+                <label key={m} className="flex items-center gap-2 rounded-lg px-2 py-2 hover:bg-secondary cursor-pointer text-sm capitalize">
+                  <input
+                    type="checkbox"
+                    checked={selectedMonths.includes(m)}
+                    onChange={() => toggleMonth(m)}
+                    className="h-4 w-4"
+                  />
+                  {monthLabel(m)}
+                </label>
+              ))}
+            </div>
+            <p className="mt-2 text-xs text-muted-foreground">
+              {selectedMonths.length === 0 ? 'Nenhum selecionado = exportar tudo.' : `${selectedMonths.length} mês(es) selecionado(s).`}
+            </p>
+            <div className="mt-4 flex gap-2">
+              <button
+                onClick={() => setExportPicker(null)}
+                className="flex-1 rounded-lg border border-border bg-secondary py-2.5 text-sm font-medium text-secondary-foreground hover:bg-secondary/80"
+              >
+                Cancelar
+              </button>
+              <button
+                onClick={confirmExport}
+                className="flex-1 rounded-lg bg-primary py-2.5 text-sm font-semibold text-primary-foreground hover:bg-primary/90"
+              >
+                Baixar
               </button>
             </div>
           </div>
-        ))}
-      </div>
+        </div>
+      )}
 
       {/* Modal: marcar como feriado/abono */}
       {markingDate && (
