@@ -1,6 +1,6 @@
 import { useEffect, useState, useCallback, useMemo } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { LogIn, LogOut, Pencil, X } from 'lucide-react';
+import { LogIn, LogOut, Pencil, X, Plus, Zap } from 'lucide-react';
 import {
   useTodayPunches,
   calculatePartialWorked,
