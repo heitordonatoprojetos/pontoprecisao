@@ -59,6 +59,24 @@ export default function HomePage() {
     return next ? next.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' }) : null;
   }, [punches, settings.defaultPunches]);
 
+  // Diferença entre última batida real e a batida padrão esperada (mesmo índice)
+  const lastPunchDelta = useMemo(() => {
+    if (!lastPunch) return null;
+    const defaults = settings.defaultPunches || [];
+    const idx = punches.length - 1;
+    if (idx < 0 || idx >= defaults.length) return null;
+    const [hh, mm] = defaults[idx].split(':').map(Number);
+    const expected = new Date(lastPunch.timestamp);
+    expected.setHours(hh, mm, 0, 0);
+    const diffMin = Math.round((lastPunch.timestamp - expected.getTime()) / 60000);
+    return diffMin;
+  }, [lastPunch, punches.length, settings.defaultPunches]);
+
+  const formatDelta = (d: number) => (d === 0 ? '±0' : d > 0 ? `+${d}` : `${d}`);
+  const lastPunchLabel = lastPunch
+    ? new Date(lastPunch.timestamp).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })
+    : null;
+
   const handlePunch = useCallback(async () => {
     await punch(settings.clockOffsetMinutes ?? 0);
     setJustPunched(true);
