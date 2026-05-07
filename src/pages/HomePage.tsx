@@ -296,41 +296,8 @@ export default function HomePage() {
           </div>
         )}
 
-        <div className="relative mt-10 flex items-center gap-4">
-          <AnimatePresence>
-            {justPunched && (
-              <motion.div
-                className="absolute left-1/2 top-1/2 h-36 w-36 -translate-x-1/2 -translate-y-1/2 rounded-full bg-primary/30"
-                initial={{ scale: 1, opacity: 0.6 }}
-                animate={{ scale: 2.5, opacity: 0 }}
-                exit={{ opacity: 0 }}
-                transition={{ duration: 0.8 }}
-              />
-            )}
-          </AnimatePresence>
-          <motion.button
-            whileTap={{ scale: 0.92 }}
-            onClick={handlePunch}
-            aria-label="Bater ponto agora"
-            className={`relative z-10 flex h-36 w-36 flex-col items-center justify-center rounded-full shadow-lg transition-colors ${
-              nextType === 'in'
-                ? 'bg-primary text-primary-foreground'
-                : 'bg-destructive text-destructive-foreground'
-            }`}
-          >
-            {nextType === 'in' ? <LogIn className="mb-1 h-8 w-8" /> : <LogOut className="mb-1 h-8 w-8" />}
-            <span className="text-sm font-semibold">{nextType === 'in' ? 'Entrada' : 'Saída'}</span>
-          </motion.button>
-
-          <motion.button
-            whileTap={{ scale: 0.92 }}
-            onClick={openManual}
-            aria-label="Bater com horário customizado"
-            className="relative z-10 flex h-16 w-16 flex-col items-center justify-center rounded-full border border-border bg-card text-foreground shadow-md transition-colors hover:bg-secondary"
-          >
-            <Pencil className="h-5 w-5" />
-          </motion.button>
-        </div>
+        {/* Botões de batida agora são flutuantes (FAB) — ver fim do layout mobile */}
+        <div className="mt-8" />
 
         <div className="mt-10 grid w-full max-w-sm grid-cols-3 gap-3">
           <StatCard label="Trabalhado" value={formatMinutes(worked)} />
