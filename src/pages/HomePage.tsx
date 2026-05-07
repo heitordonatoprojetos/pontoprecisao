@@ -21,6 +21,7 @@ export default function HomePage() {
   const [showManual, setShowManual] = useState(false);
   const [manualTime, setManualTime] = useState('');
   const [manualSaving, setManualSaving] = useState(false);
+  const [fabOpen, setFabOpen] = useState(false);
 
   // Tick segundo-a-segundo (alinhado ao próximo segundo cheio).
   // Não exibimos os segundos — mas isso garante que minuto vire imediatamente.
