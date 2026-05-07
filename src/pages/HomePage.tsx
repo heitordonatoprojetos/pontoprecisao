@@ -158,7 +158,7 @@ export default function HomePage() {
                   <span className="font-semibold tabular-nums text-foreground">{lastPunchLabel}</span>
                   {lastPunchDelta !== null && (
                     <span className={`font-bold tabular-nums ${
-                      lastPunchDelta === 0 ? 'text-muted-foreground' : lastPunchDelta > 0 ? 'text-warning' : 'text-success'
+                      lastPunchDelta === 0 ? 'text-muted-foreground' : lastPunchDelta > 0 ? 'text-destructive' : 'text-success'
                     }`}>
                       {formatDelta(lastPunchDelta)}
                     </span>
@@ -288,7 +288,7 @@ export default function HomePage() {
             <span className="font-semibold tabular-nums text-foreground">{lastPunchLabel}</span>
             {lastPunchDelta !== null && (
               <span className={`font-bold tabular-nums ${
-                lastPunchDelta === 0 ? 'text-muted-foreground' : lastPunchDelta > 0 ? 'text-warning' : 'text-success'
+                lastPunchDelta === 0 ? 'text-muted-foreground' : lastPunchDelta > 0 ? 'text-destructive' : 'text-success'
               }`}>
                 {formatDelta(lastPunchDelta)}
               </span>
