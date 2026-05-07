@@ -138,6 +138,19 @@ export default function HomePage() {
                   </div>
                 )}
               </div>
+              {lastPunchLabel && (
+                <div className="mt-3 inline-flex items-center gap-2 rounded-full border border-border bg-background/60 px-4 py-1.5 text-sm">
+                  <span className="text-muted-foreground">Última batida:</span>
+                  <span className="font-semibold tabular-nums text-foreground">{lastPunchLabel}</span>
+                  {lastPunchDelta !== null && (
+                    <span className={`font-bold tabular-nums ${
+                      lastPunchDelta === 0 ? 'text-muted-foreground' : lastPunchDelta > 0 ? 'text-warning' : 'text-success'
+                    }`}>
+                      {formatDelta(lastPunchDelta)}
+                    </span>
+                  )}
+                </div>
+              )}
 
               <div className="relative mt-8 flex items-center gap-5">
                 <AnimatePresence>
