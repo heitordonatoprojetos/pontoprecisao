@@ -330,6 +330,97 @@ export default function HomePage() {
         )}
       </div>
 
+      {/* === FAB MOBILE — botão flutuante de batida (acima da BottomNav) === */}
+      <div className="lg:hidden">
+        <AnimatePresence>
+          {fabOpen && (
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              className="fixed inset-0 z-40 bg-black/30"
+              onClick={() => setFabOpen(false)}
+            />
+          )}
+        </AnimatePresence>
+
+        <div className="fixed bottom-20 right-5 z-50 flex flex-col items-end gap-3 safe-bottom">
+          <AnimatePresence>
+            {fabOpen && (
+              <>
+                <motion.button
+                  key="manual"
+                  initial={{ opacity: 0, y: 16, scale: 0.8 }}
+                  animate={{ opacity: 1, y: 0, scale: 1 }}
+                  exit={{ opacity: 0, y: 16, scale: 0.8 }}
+                  transition={{ duration: 0.18, delay: 0.05 }}
+                  onClick={() => { setFabOpen(false); openManual(); }}
+                  className="flex items-center gap-3 rounded-full border border-border bg-card px-4 py-3 shadow-lg"
+                  aria-label="Bater com horário customizado"
+                >
+                  <span className="text-sm font-medium text-foreground">Editar horário</span>
+                  <span className="flex h-10 w-10 items-center justify-center rounded-full bg-secondary text-secondary-foreground">
+                    <Pencil className="h-5 w-5" />
+                  </span>
+                </motion.button>
+
+                <motion.button
+                  key="direct"
+                  initial={{ opacity: 0, y: 16, scale: 0.8 }}
+                  animate={{ opacity: 1, y: 0, scale: 1 }}
+                  exit={{ opacity: 0, y: 16, scale: 0.8 }}
+                  transition={{ duration: 0.18 }}
+                  onClick={() => { setFabOpen(false); handlePunch(); }}
+                  className={`flex items-center gap-3 rounded-full px-4 py-3 shadow-lg ${
+                    nextType === 'in' ? 'bg-primary text-primary-foreground' : 'bg-destructive text-destructive-foreground'
+                  }`}
+                  aria-label={`Bater ${nextType === 'in' ? 'entrada' : 'saída'} agora`}
+                >
+                  <span className="text-sm font-semibold">
+                    {nextType === 'in' ? 'Bater entrada' : 'Bater saída'}
+                  </span>
+                  <span className="flex h-10 w-10 items-center justify-center rounded-full bg-white/20">
+                    <Zap className="h-5 w-5" />
+                  </span>
+                </motion.button>
+              </>
+            )}
+          </AnimatePresence>
+
+          <motion.button
+            whileTap={{ scale: 0.9 }}
+            onClick={() => setFabOpen(o => !o)}
+            aria-label={fabOpen ? 'Fechar opções' : 'Abrir opções de batida'}
+            className={`relative flex h-16 w-16 items-center justify-center rounded-full shadow-xl transition-colors ${
+              fabOpen
+                ? 'bg-secondary text-secondary-foreground'
+                : nextType === 'in'
+                  ? 'bg-primary text-primary-foreground'
+                  : 'bg-destructive text-destructive-foreground'
+            }`}
+          >
+            <AnimatePresence>
+              {justPunched && (
+                <motion.span
+                  className="absolute inset-0 rounded-full bg-primary/40"
+                  initial={{ scale: 1, opacity: 0.6 }}
+                  animate={{ scale: 2.2, opacity: 0 }}
+                  exit={{ opacity: 0 }}
+                  transition={{ duration: 0.7 }}
+                />
+              )}
+            </AnimatePresence>
+            <motion.span
+              animate={{ rotate: fabOpen ? 45 : 0 }}
+              transition={{ duration: 0.2 }}
+              className="relative"
+            >
+              <Plus className="h-7 w-7" />
+            </motion.span>
+          </motion.button>
+        </div>
+      </div>
+
       {/* Manual punch modal */}
       {showManual && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4" onClick={() => !manualSaving && setShowManual(false)}>
