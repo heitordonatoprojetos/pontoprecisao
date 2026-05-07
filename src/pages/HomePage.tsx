@@ -1,6 +1,6 @@
 import { useEffect, useState, useCallback, useMemo } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { LogIn, LogOut, Pencil, X } from 'lucide-react';
+import { LogIn, LogOut, Pencil, X, Plus, Zap } from 'lucide-react';
 import {
   useTodayPunches,
   calculatePartialWorked,
@@ -21,6 +21,7 @@ export default function HomePage() {
   const [showManual, setShowManual] = useState(false);
   const [manualTime, setManualTime] = useState('');
   const [manualSaving, setManualSaving] = useState(false);
+  const [fabOpen, setFabOpen] = useState(false);
 
   // Tick segundo-a-segundo (alinhado ao próximo segundo cheio).
   // Não exibimos os segundos — mas isso garante que minuto vire imediatamente.
@@ -59,18 +60,32 @@ export default function HomePage() {
     return next ? next.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' }) : null;
   }, [punches, settings.defaultPunches]);
 
-  // Diferença entre última batida real e a batida padrão esperada (mesmo índice)
+  // Diferença entre a última batida real e o horário esperado dela.
+  // Para a primeira batida do dia, esperado = defaultPunches[0].
+  // Para as demais, esperado = batida anterior + (defaults[idx] - defaults[idx-1]).
+  // Positivo = atrasado (vermelho). Negativo = adiantado (verde).
   const lastPunchDelta = useMemo(() => {
     if (!lastPunch) return null;
     const defaults = settings.defaultPunches || [];
     const idx = punches.length - 1;
     if (idx < 0 || idx >= defaults.length) return null;
-    const [hh, mm] = defaults[idx].split(':').map(Number);
-    const expected = new Date(lastPunch.timestamp);
-    expected.setHours(hh, mm, 0, 0);
-    const diffMin = Math.round((lastPunch.timestamp - expected.getTime()) / 60000);
-    return diffMin;
-  }, [lastPunch, punches.length, settings.defaultPunches]);
+    const base = new Date(lastPunch.timestamp);
+    let expectedMs: number;
+    if (idx === 0) {
+      const [hh, mm] = defaults[0].split(':').map(Number);
+      const e = new Date(base);
+      e.setHours(hh, mm, 0, 0);
+      expectedMs = e.getTime();
+    } else {
+      const prevReal = punches[idx - 1].timestamp;
+      const [ph, pm] = defaults[idx - 1].split(':').map(Number);
+      const [nh, nm] = defaults[idx].split(':').map(Number);
+      const prevDef = new Date(base); prevDef.setHours(ph, pm, 0, 0);
+      const nextDef = new Date(base); nextDef.setHours(nh, nm, 0, 0);
+      expectedMs = prevReal + (nextDef.getTime() - prevDef.getTime());
+    }
+    return Math.round((lastPunch.timestamp - expectedMs) / 60000);
+  }, [lastPunch, punches, settings.defaultPunches]);
 
   const formatDelta = (d: number) => (d === 0 ? '±0' : d > 0 ? `+${d}` : `${d}`);
   const lastPunchLabel = lastPunch
@@ -144,7 +159,7 @@ export default function HomePage() {
                   <span className="font-semibold tabular-nums text-foreground">{lastPunchLabel}</span>
                   {lastPunchDelta !== null && (
                     <span className={`font-bold tabular-nums ${
-                      lastPunchDelta === 0 ? 'text-muted-foreground' : lastPunchDelta > 0 ? 'text-warning' : 'text-success'
+                      lastPunchDelta === 0 ? 'text-muted-foreground' : lastPunchDelta > 0 ? 'text-destructive' : 'text-success'
                     }`}>
                       {formatDelta(lastPunchDelta)}
                     </span>
@@ -274,7 +289,7 @@ export default function HomePage() {
             <span className="font-semibold tabular-nums text-foreground">{lastPunchLabel}</span>
             {lastPunchDelta !== null && (
               <span className={`font-bold tabular-nums ${
-                lastPunchDelta === 0 ? 'text-muted-foreground' : lastPunchDelta > 0 ? 'text-warning' : 'text-success'
+                lastPunchDelta === 0 ? 'text-muted-foreground' : lastPunchDelta > 0 ? 'text-destructive' : 'text-success'
               }`}>
                 {formatDelta(lastPunchDelta)}
               </span>
@@ -282,41 +297,8 @@ export default function HomePage() {
           </div>
         )}
 
-        <div className="relative mt-10 flex items-center gap-4">
-          <AnimatePresence>
-            {justPunched && (
-              <motion.div
-                className="absolute left-1/2 top-1/2 h-36 w-36 -translate-x-1/2 -translate-y-1/2 rounded-full bg-primary/30"
-                initial={{ scale: 1, opacity: 0.6 }}
-                animate={{ scale: 2.5, opacity: 0 }}
-                exit={{ opacity: 0 }}
-                transition={{ duration: 0.8 }}
-              />
-            )}
-          </AnimatePresence>
-          <motion.button
-            whileTap={{ scale: 0.92 }}
-            onClick={handlePunch}
-            aria-label="Bater ponto agora"
-            className={`relative z-10 flex h-36 w-36 flex-col items-center justify-center rounded-full shadow-lg transition-colors ${
-              nextType === 'in'
-                ? 'bg-primary text-primary-foreground'
-                : 'bg-destructive text-destructive-foreground'
-            }`}
-          >
-            {nextType === 'in' ? <LogIn className="mb-1 h-8 w-8" /> : <LogOut className="mb-1 h-8 w-8" />}
-            <span className="text-sm font-semibold">{nextType === 'in' ? 'Entrada' : 'Saída'}</span>
-          </motion.button>
-
-          <motion.button
-            whileTap={{ scale: 0.92 }}
-            onClick={openManual}
-            aria-label="Bater com horário customizado"
-            className="relative z-10 flex h-16 w-16 flex-col items-center justify-center rounded-full border border-border bg-card text-foreground shadow-md transition-colors hover:bg-secondary"
-          >
-            <Pencil className="h-5 w-5" />
-          </motion.button>
-        </div>
+        {/* Botões de batida agora são flutuantes (FAB) — ver fim do layout mobile */}
+        <div className="mt-8" />
 
         <div className="mt-10 grid w-full max-w-sm grid-cols-3 gap-3">
           <StatCard label="Trabalhado" value={formatMinutes(worked)} />
@@ -346,6 +328,97 @@ export default function HomePage() {
             </div>
           </div>
         )}
+      </div>
+
+      {/* === FAB MOBILE — botão flutuante de batida (acima da BottomNav) === */}
+      <div className="lg:hidden">
+        <AnimatePresence>
+          {fabOpen && (
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              className="fixed inset-0 z-40 bg-black/30"
+              onClick={() => setFabOpen(false)}
+            />
+          )}
+        </AnimatePresence>
+
+        <div className="fixed bottom-20 right-5 z-50 flex flex-col items-end gap-3 safe-bottom">
+          <AnimatePresence>
+            {fabOpen && (
+              <>
+                <motion.button
+                  key="manual"
+                  initial={{ opacity: 0, y: 16, scale: 0.8 }}
+                  animate={{ opacity: 1, y: 0, scale: 1 }}
+                  exit={{ opacity: 0, y: 16, scale: 0.8 }}
+                  transition={{ duration: 0.18, delay: 0.05 }}
+                  onClick={() => { setFabOpen(false); openManual(); }}
+                  className="flex items-center gap-3 rounded-full border border-border bg-card px-4 py-3 shadow-lg"
+                  aria-label="Bater com horário customizado"
+                >
+                  <span className="text-sm font-medium text-foreground">Editar horário</span>
+                  <span className="flex h-10 w-10 items-center justify-center rounded-full bg-secondary text-secondary-foreground">
+                    <Pencil className="h-5 w-5" />
+                  </span>
+                </motion.button>
+
+                <motion.button
+                  key="direct"
+                  initial={{ opacity: 0, y: 16, scale: 0.8 }}
+                  animate={{ opacity: 1, y: 0, scale: 1 }}
+                  exit={{ opacity: 0, y: 16, scale: 0.8 }}
+                  transition={{ duration: 0.18 }}
+                  onClick={() => { setFabOpen(false); handlePunch(); }}
+                  className={`flex items-center gap-3 rounded-full px-4 py-3 shadow-lg ${
+                    nextType === 'in' ? 'bg-primary text-primary-foreground' : 'bg-destructive text-destructive-foreground'
+                  }`}
+                  aria-label={`Bater ${nextType === 'in' ? 'entrada' : 'saída'} agora`}
+                >
+                  <span className="text-sm font-semibold">
+                    {nextType === 'in' ? 'Bater entrada' : 'Bater saída'}
+                  </span>
+                  <span className="flex h-10 w-10 items-center justify-center rounded-full bg-white/20">
+                    <Zap className="h-5 w-5" />
+                  </span>
+                </motion.button>
+              </>
+            )}
+          </AnimatePresence>
+
+          <motion.button
+            whileTap={{ scale: 0.9 }}
+            onClick={() => setFabOpen(o => !o)}
+            aria-label={fabOpen ? 'Fechar opções' : 'Abrir opções de batida'}
+            className={`relative flex h-16 w-16 items-center justify-center rounded-full shadow-xl transition-colors ${
+              fabOpen
+                ? 'bg-secondary text-secondary-foreground'
+                : nextType === 'in'
+                  ? 'bg-primary text-primary-foreground'
+                  : 'bg-destructive text-destructive-foreground'
+            }`}
+          >
+            <AnimatePresence>
+              {justPunched && (
+                <motion.span
+                  className="absolute inset-0 rounded-full bg-primary/40"
+                  initial={{ scale: 1, opacity: 0.6 }}
+                  animate={{ scale: 2.2, opacity: 0 }}
+                  exit={{ opacity: 0 }}
+                  transition={{ duration: 0.7 }}
+                />
+              )}
+            </AnimatePresence>
+            <motion.span
+              animate={{ rotate: fabOpen ? 45 : 0 }}
+              transition={{ duration: 0.2 }}
+              className="relative"
+            >
+              <Plus className="h-7 w-7" />
+            </motion.span>
+          </motion.button>
+        </div>
       </div>
 
       {/* Manual punch modal */}
