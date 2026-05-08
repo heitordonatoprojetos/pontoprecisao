@@ -355,12 +355,12 @@ export default function HomePage() {
                   exit={{ opacity: 0, y: 16, scale: 0.8 }}
                   transition={{ duration: 0.18, delay: 0.05 }}
                   onClick={() => { setFabOpen(false); openManual(); }}
-                  className="flex items-center gap-3 rounded-full border border-border bg-card px-4 py-3 shadow-lg"
+                  className="flex items-center gap-3 rounded-full border border-border bg-card px-5 py-3.5 shadow-lg"
                   aria-label="Bater com horário customizado"
                 >
                   <span className="text-sm font-medium text-foreground">Editar horário</span>
-                  <span className="flex h-10 w-10 items-center justify-center rounded-full bg-secondary text-secondary-foreground">
-                    <Pencil className="h-5 w-5" />
+                  <span className="flex h-12 w-12 items-center justify-center rounded-full bg-secondary text-secondary-foreground">
+                    <Pencil className="h-6 w-6" />
                   </span>
                 </motion.button>
 
@@ -371,7 +371,7 @@ export default function HomePage() {
                   exit={{ opacity: 0, y: 16, scale: 0.8 }}
                   transition={{ duration: 0.18 }}
                   onClick={() => { setFabOpen(false); handlePunch(); }}
-                  className={`flex items-center gap-3 rounded-full px-4 py-3 shadow-lg ${
+                  className={`flex items-center gap-3 rounded-full px-5 py-3.5 shadow-lg ${
                     nextType === 'in' ? 'bg-primary text-primary-foreground' : 'bg-destructive text-destructive-foreground'
                   }`}
                   aria-label={`Bater ${nextType === 'in' ? 'entrada' : 'saída'} agora`}
@@ -379,8 +379,8 @@ export default function HomePage() {
                   <span className="text-sm font-semibold">
                     {nextType === 'in' ? 'Bater entrada' : 'Bater saída'}
                   </span>
-                  <span className="flex h-10 w-10 items-center justify-center rounded-full bg-white/20">
-                    <Zap className="h-5 w-5" />
+                  <span className="flex h-12 w-12 items-center justify-center rounded-full bg-white/20">
+                    <Zap className="h-6 w-6" />
                   </span>
                 </motion.button>
               </>
@@ -391,7 +391,7 @@ export default function HomePage() {
             whileTap={{ scale: 0.9 }}
             onClick={() => setFabOpen(o => !o)}
             aria-label={fabOpen ? 'Fechar opções' : 'Abrir opções de batida'}
-            className={`relative flex h-16 w-16 items-center justify-center rounded-full shadow-xl transition-colors ${
+            className={`relative flex h-20 w-20 items-center justify-center rounded-full shadow-xl transition-colors ${
               fabOpen
                 ? 'bg-secondary text-secondary-foreground'
                 : nextType === 'in'
@@ -415,7 +415,7 @@ export default function HomePage() {
               transition={{ duration: 0.2 }}
               className="relative"
             >
-              <Plus className="h-7 w-7" />
+              <Plus className="h-8 w-8" />
             </motion.span>
           </motion.button>
         </div>
