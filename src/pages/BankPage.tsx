@@ -42,6 +42,7 @@ export default function BankPage() {
   const [hours, setHours] = useState('');
   const [mins, setMins] = useState('');
   const [desc, setDesc] = useState('');
+  const [adjDate, setAdjDate] = useState(() => new Date().toISOString().split('T')[0]);
   const [showAllDays, setShowAllDays] = useState(false);
   const [exportPicker, setExportPicker] = useState<null | 'pdf' | 'xlsx'>(null);
   const [selectedMonths, setSelectedMonths] = useState<string[]>([]);
@@ -123,11 +124,13 @@ export default function BankPage() {
     if (totalMins <= 0) return;
     const final = showForm === 'debit' ? -totalMins : totalMins;
     const label = showForm === 'credit' ? 'abono' : 'débito';
-    const confirmMsg = `Confirmar ${label} de ${Math.floor(totalMins / 60)}h${String(totalMins % 60).padStart(2, '0')} no banco de horas?`;
+    const dateFmt = new Date(adjDate + 'T12:00:00').toLocaleDateString('pt-BR');
+    const confirmMsg = `Confirmar ${label} de ${Math.floor(totalMins / 60)}h${String(totalMins % 60).padStart(2, '0')} em ${dateFmt}?`;
     if (!confirm(confirmMsg)) return;
-    await add(final, desc || (showForm === 'credit' ? 'Abono' : 'Débito'));
+    await add(final, desc || (showForm === 'credit' ? 'Abono' : 'Débito'), adjDate);
     setShowForm(null);
     setHours(''); setMins(''); setDesc('');
+    setAdjDate(new Date().toISOString().split('T')[0]);
   };
 
   const handleRemoveAdjustment = async (id: string) => {
@@ -294,6 +297,16 @@ export default function BankPage() {
               <label className="text-xs text-muted-foreground">Minutos</label>
               <input type="number" value={mins} onChange={e => setMins(e.target.value)} placeholder="0" min="0" max="59" className="w-full rounded-lg border border-input bg-background px-3 py-2 text-sm" />
             </div>
+          </div>
+          <div>
+            <label className="text-xs text-muted-foreground">Data</label>
+            <input
+              type="date"
+              value={adjDate}
+              max={new Date().toISOString().split('T')[0]}
+              onChange={e => setAdjDate(e.target.value)}
+              className="w-full rounded-lg border border-input bg-background px-3 py-2 text-sm"
+            />
           </div>
           <input value={desc} onChange={e => setDesc(e.target.value)} placeholder="Descrição (opcional)" className="w-full rounded-lg border border-input bg-background px-3 py-2 text-sm" />
           <div className="flex gap-2">
