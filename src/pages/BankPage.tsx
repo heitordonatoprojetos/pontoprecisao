@@ -42,6 +42,7 @@ export default function BankPage() {
   const [hours, setHours] = useState('');
   const [mins, setMins] = useState('');
   const [desc, setDesc] = useState('');
+  const [adjDate, setAdjDate] = useState(() => new Date().toISOString().split('T')[0]);
   const [showAllDays, setShowAllDays] = useState(false);
   const [exportPicker, setExportPicker] = useState<null | 'pdf' | 'xlsx'>(null);
   const [selectedMonths, setSelectedMonths] = useState<string[]>([]);
