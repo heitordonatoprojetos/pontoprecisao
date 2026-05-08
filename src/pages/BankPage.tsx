@@ -298,6 +298,16 @@ export default function BankPage() {
               <input type="number" value={mins} onChange={e => setMins(e.target.value)} placeholder="0" min="0" max="59" className="w-full rounded-lg border border-input bg-background px-3 py-2 text-sm" />
             </div>
           </div>
+          <div>
+            <label className="text-xs text-muted-foreground">Data</label>
+            <input
+              type="date"
+              value={adjDate}
+              max={new Date().toISOString().split('T')[0]}
+              onChange={e => setAdjDate(e.target.value)}
+              className="w-full rounded-lg border border-input bg-background px-3 py-2 text-sm"
+            />
+          </div>
           <input value={desc} onChange={e => setDesc(e.target.value)} placeholder="Descrição (opcional)" className="w-full rounded-lg border border-input bg-background px-3 py-2 text-sm" />
           <div className="flex gap-2">
             <button onClick={handleSubmit} className="flex-1 rounded-lg bg-primary py-2 text-sm font-medium text-primary-foreground">Salvar</button>
