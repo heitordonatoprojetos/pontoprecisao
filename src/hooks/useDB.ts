@@ -102,6 +102,7 @@ export function calculateNextExpectedPunch(
   punches: Punch[],
   defaultPunches: string[],
   today: Date = new Date(),
+  dailyHours?: number,
 ): Date | null {
   if (!defaultPunches || defaultPunches.length === 0) return null;
   const sorted = [...punches].sort((a, b) => a.timestamp - b.timestamp);
@@ -114,6 +115,21 @@ export function calculateNextExpectedPunch(
 
   const nextIdx = sorted.length;
   const lastReal = sorted[sorted.length - 1].timestamp;
+
+  // Última batida do dia: calcular pelo saldo (atinge dailyHours).
+  if (dailyHours && nextIdx === defaultPunches.length - 1) {
+    const lastP = sorted[sorted.length - 1];
+    if (lastP.type === 'in') {
+      // Está trabalhando: somar minutos restantes ao início do segmento atual.
+      let completed = 0;
+      for (let i = 0; i + 1 < sorted.length; i += 2) {
+        completed += (sorted[i + 1].timestamp - sorted[i].timestamp) / 60000;
+      }
+      const remaining = dailyHours - completed;
+      return new Date(lastP.timestamp + remaining * 60000);
+    }
+  }
+
   const prevDefault = timeToDate(defaultPunches[nextIdx - 1], today).getTime();
   const nextDefault = timeToDate(defaultPunches[nextIdx], today).getTime();
   const intervalMs = nextDefault - prevDefault;

@@ -56,9 +56,9 @@ export default function HomePage() {
   const balance = worked - expected;
 
   const nextExpectedPunch = useMemo(() => {
-    const next = calculateNextExpectedPunch(punches, settings.defaultPunches || []);
+    const next = calculateNextExpectedPunch(punches, settings.defaultPunches || [], new Date(), settings.dailyHours);
     return next ? next.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' }) : null;
-  }, [punches, settings.defaultPunches]);
+  }, [punches, settings.defaultPunches, settings.dailyHours]);
 
   // Diferença entre a última batida real e o horário esperado dela.
   // Para a primeira batida do dia, esperado = defaultPunches[0].
