@@ -124,11 +124,13 @@ export default function BankPage() {
     if (totalMins <= 0) return;
     const final = showForm === 'debit' ? -totalMins : totalMins;
     const label = showForm === 'credit' ? 'abono' : 'débito';
-    const confirmMsg = `Confirmar ${label} de ${Math.floor(totalMins / 60)}h${String(totalMins % 60).padStart(2, '0')} no banco de horas?`;
+    const dateFmt = new Date(adjDate + 'T12:00:00').toLocaleDateString('pt-BR');
+    const confirmMsg = `Confirmar ${label} de ${Math.floor(totalMins / 60)}h${String(totalMins % 60).padStart(2, '0')} em ${dateFmt}?`;
     if (!confirm(confirmMsg)) return;
-    await add(final, desc || (showForm === 'credit' ? 'Abono' : 'Débito'));
+    await add(final, desc || (showForm === 'credit' ? 'Abono' : 'Débito'), adjDate);
     setShowForm(null);
     setHours(''); setMins(''); setDesc('');
+    setAdjDate(new Date().toISOString().split('T')[0]);
   };
 
   const handleRemoveAdjustment = async (id: string) => {
