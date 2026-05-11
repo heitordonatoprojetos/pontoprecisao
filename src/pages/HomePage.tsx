@@ -60,10 +60,10 @@ export default function HomePage() {
     return next ? next.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' }) : null;
   }, [punches, settings.defaultPunches, settings.dailyHours]);
 
-  // Diferença entre a última batida real e o horário esperado dela.
-  // Para a primeira batida do dia, esperado = defaultPunches[0].
-  // Para as demais, esperado = batida anterior + (defaults[idx] - defaults[idx-1]).
-  // Positivo = atrasado (vermelho). Negativo = adiantado (verde).
+  // Delta da última batida medido pelo IMPACTO no saldo:
+  // - IN  (entrada/retorno): chegar antes = + (verde); atrasado = − (vermelho).
+  // - OUT (saída): sair depois = + (verde); sair antes = − (vermelho).
+  // Em ambos os casos, sinal positivo => batida contribui para aumentar o saldo.
   const lastPunchDelta = useMemo(() => {
     if (!lastPunch) return null;
     const defaults = settings.defaultPunches || [];
@@ -84,7 +84,9 @@ export default function HomePage() {
       const nextDef = new Date(base); nextDef.setHours(nh, nm, 0, 0);
       expectedMs = prevReal + (nextDef.getTime() - prevDef.getTime());
     }
-    return Math.round((lastPunch.timestamp - expectedMs) / 60000);
+    const diffMin = Math.round((lastPunch.timestamp - expectedMs) / 60000);
+    // sinal pelo impacto no saldo: out → diff positivo é bom; in → diff positivo é ruim.
+    return lastPunch.type === 'out' ? diffMin : -diffMin;
   }, [lastPunch, punches, settings.defaultPunches]);
 
   const formatDelta = (d: number) => (d === 0 ? '±0' : d > 0 ? `+${d}` : `${d}`);
@@ -159,7 +161,7 @@ export default function HomePage() {
                   <span className="font-semibold tabular-nums text-foreground">{lastPunchLabel}</span>
                   {lastPunchDelta !== null && (
                     <span className={`font-bold tabular-nums ${
-                      lastPunchDelta === 0 ? 'text-muted-foreground' : lastPunchDelta > 0 ? 'text-destructive' : 'text-success'
+                      lastPunchDelta === 0 ? 'text-muted-foreground' : lastPunchDelta > 0 ? 'text-success' : 'text-destructive'
                     }`}>
                       {formatDelta(lastPunchDelta)}
                     </span>
@@ -289,7 +291,7 @@ export default function HomePage() {
             <span className="font-semibold tabular-nums text-foreground">{lastPunchLabel}</span>
             {lastPunchDelta !== null && (
               <span className={`font-bold tabular-nums ${
-                lastPunchDelta === 0 ? 'text-muted-foreground' : lastPunchDelta > 0 ? 'text-destructive' : 'text-success'
+                lastPunchDelta === 0 ? 'text-muted-foreground' : lastPunchDelta > 0 ? 'text-success' : 'text-destructive'
               }`}>
                 {formatDelta(lastPunchDelta)}
               </span>
@@ -306,12 +308,6 @@ export default function HomePage() {
           <StatCard label="Saldo" value={formatMinutes(balance)} variant={balance >= 0 ? 'positive' : 'negative'} />
         </div>
 
-        {lastPunch && (
-          <p className="mt-6 text-sm text-muted-foreground">
-            Última batida: {new Date(lastPunch.timestamp).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}
-            {' '}({lastPunch.type === 'in' ? 'Entrada' : 'Saída'})
-          </p>
-        )}
 
         {punches.length > 0 && (
           <div className="mt-6 w-full max-w-sm">
@@ -355,12 +351,12 @@ export default function HomePage() {
                   exit={{ opacity: 0, y: 16, scale: 0.8 }}
                   transition={{ duration: 0.18, delay: 0.05 }}
                   onClick={() => { setFabOpen(false); openManual(); }}
-                  className="flex items-center gap-3 rounded-full border border-border bg-card px-5 py-3.5 shadow-lg"
+                  className="flex items-center gap-3 rounded-full border border-border bg-card px-6 py-4 shadow-lg"
                   aria-label="Bater com horário customizado"
                 >
                   <span className="text-sm font-medium text-foreground">Editar horário</span>
-                  <span className="flex h-12 w-12 items-center justify-center rounded-full bg-secondary text-secondary-foreground">
-                    <Pencil className="h-6 w-6" />
+                  <span className="flex h-14 w-14 items-center justify-center rounded-full bg-secondary text-secondary-foreground">
+                    <Pencil className="h-7 w-7" />
                   </span>
                 </motion.button>
 
@@ -371,7 +367,7 @@ export default function HomePage() {
                   exit={{ opacity: 0, y: 16, scale: 0.8 }}
                   transition={{ duration: 0.18 }}
                   onClick={() => { setFabOpen(false); handlePunch(); }}
-                  className={`flex items-center gap-3 rounded-full px-5 py-3.5 shadow-lg ${
+                  className={`flex items-center gap-3 rounded-full px-6 py-4 shadow-lg ${
                     nextType === 'in' ? 'bg-primary text-primary-foreground' : 'bg-destructive text-destructive-foreground'
                   }`}
                   aria-label={`Bater ${nextType === 'in' ? 'entrada' : 'saída'} agora`}
@@ -379,8 +375,8 @@ export default function HomePage() {
                   <span className="text-sm font-semibold">
                     {nextType === 'in' ? 'Bater entrada' : 'Bater saída'}
                   </span>
-                  <span className="flex h-12 w-12 items-center justify-center rounded-full bg-white/20">
-                    <Zap className="h-6 w-6" />
+                  <span className="flex h-14 w-14 items-center justify-center rounded-full bg-white/20">
+                    <Zap className="h-7 w-7" />
                   </span>
                 </motion.button>
               </>
@@ -391,7 +387,7 @@ export default function HomePage() {
             whileTap={{ scale: 0.9 }}
             onClick={() => setFabOpen(o => !o)}
             aria-label={fabOpen ? 'Fechar opções' : 'Abrir opções de batida'}
-            className={`relative flex h-20 w-20 items-center justify-center rounded-full shadow-xl transition-colors ${
+            className={`relative flex h-24 w-24 items-center justify-center rounded-full shadow-xl transition-colors ${
               fabOpen
                 ? 'bg-secondary text-secondary-foreground'
                 : nextType === 'in'
@@ -415,7 +411,7 @@ export default function HomePage() {
               transition={{ duration: 0.2 }}
               className="relative"
             >
-              <Plus className="h-8 w-8" />
+              <Plus className="h-10 w-10" />
             </motion.span>
           </motion.button>
         </div>
