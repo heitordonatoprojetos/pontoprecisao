@@ -161,7 +161,7 @@ export default function HomePage() {
                   <span className="font-semibold tabular-nums text-foreground">{lastPunchLabel}</span>
                   {lastPunchDelta !== null && (
                     <span className={`font-bold tabular-nums ${
-                      lastPunchDelta === 0 ? 'text-muted-foreground' : lastPunchDelta > 0 ? 'text-destructive' : 'text-success'
+                      lastPunchDelta === 0 ? 'text-muted-foreground' : lastPunchDelta > 0 ? 'text-success' : 'text-destructive'
                     }`}>
                       {formatDelta(lastPunchDelta)}
                     </span>
@@ -291,7 +291,7 @@ export default function HomePage() {
             <span className="font-semibold tabular-nums text-foreground">{lastPunchLabel}</span>
             {lastPunchDelta !== null && (
               <span className={`font-bold tabular-nums ${
-                lastPunchDelta === 0 ? 'text-muted-foreground' : lastPunchDelta > 0 ? 'text-destructive' : 'text-success'
+                lastPunchDelta === 0 ? 'text-muted-foreground' : lastPunchDelta > 0 ? 'text-success' : 'text-destructive'
               }`}>
                 {formatDelta(lastPunchDelta)}
               </span>
@@ -308,12 +308,6 @@ export default function HomePage() {
           <StatCard label="Saldo" value={formatMinutes(balance)} variant={balance >= 0 ? 'positive' : 'negative'} />
         </div>
 
-        {lastPunch && (
-          <p className="mt-6 text-sm text-muted-foreground">
-            Última batida: {new Date(lastPunch.timestamp).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}
-            {' '}({lastPunch.type === 'in' ? 'Entrada' : 'Saída'})
-          </p>
-        )}
 
         {punches.length > 0 && (
           <div className="mt-6 w-full max-w-sm">
