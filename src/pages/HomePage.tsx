@@ -411,7 +411,7 @@ export default function HomePage() {
               transition={{ duration: 0.2 }}
               className="relative"
             >
-              <Plus className="h-8 w-8" />
+              <Plus className="h-10 w-10" />
             </motion.span>
           </motion.button>
         </div>
