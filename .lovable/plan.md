@@ -1,91 +1,53 @@
-# Ponto Certo v1.1.3
+# Plano — devX © 2026 - v.1.2.0
 
-Implementação focada e cuidadosa: NÃO alterar lógica já estável (cálculo de jornada, banco de horas, batida deslizante, ajuste de relógio). Mudanças isoladas em arquivos específicos.
+## 1. FAB principal e secundários (um pouco maiores)
+Em `src/pages/HomePage.tsx` (apenas bloco mobile FAB):
+- FAB principal: `h-20 w-20` → `h-24 w-24`; ícone `h-8 w-8` → `h-10 w-10`.
+- Botões secundários (Direta / Editar horário): `h-12 w-12` → `h-14 w-14`; ícone `h-6 w-6` → `h-7 w-7`; padding do "pill" `px-5 py-3.5` → `px-6 py-4`; texto `text-sm` (ok).
+- Sem mexer no layout desktop (`lg:` permanece intacto).
 
-## 1. Edição mais abrangente no Diário
+## 2. Lógica do indicador da última batida (sinal pelo impacto no saldo)
+Hoje `lastPunchDelta = actual - expected` e exibe `+` para atrasado (vermelho) / `−` para adiantado (verde). Isso está correto para batidas de **entrada** (atrasar = ruim para saldo), mas **incorreto para batidas de saída**: sair antes do previsto reduz o tempo trabalhado, então deve mostrar `−` (vermelho); sair depois do previsto aumenta o saldo, então `+` (verde).
 
-Em `src/pages/DailyPage.tsx`:
+Nova regra unificada (sinal = impacto no saldo):
+- Batida do tipo `in` (entrada/retorno): `delta = expectedMs - actualMs` (chegar antes = +, chegar atrasado = −).
+- Batida do tipo `out` (saída): `delta = actualMs - expectedMs` (sair depois = +, sair antes = −).
+- Cor: `> 0` verde (`text-success`), `< 0` vermelho (`text-destructive`), `0` neutro (`text-muted-foreground`).
+- Formato continua `+N`, `−N`, `±0` (em minutos).
 
-- No bloco de edição (que hoje só mostra `<input type="time">`), adicionar:
-  - Um `<select>` para alterar o **tipo** (`Entrada` / `Saída`) da batida existente.
-  - Mantém o input de horário.
-  - Botão "Salvar" e "Cancelar".
-- Estender `handleEdit` para também enviar o novo tipo. Como `updatePunch(id, timestamp)` em `useDB.ts` só aceita timestamp, vou adicionar um segundo parâmetro opcional:
-  ```ts
-  export async function updatePunch(id: string, timestamp: number, type?: 'in' | 'out')
-  ```
-  Se `type` for passado, inclui no `.update({...})`. Sem alterar nenhum chamador existente.
+Aplicar em `lastPunchDelta` no `HomePage.tsx` (afeta tanto desktop quanto mobile, pois a variável é compartilhada).
 
-Nada mais é tocado nessa página.
+## 3. Transições entre páginas + swipe para trocar de aba (mobile)
+- Adicionar wrapper `AnimatedRoutes` em `src/App.tsx` usando `framer-motion` (`AnimatePresence mode="wait"`) ao redor de `<Routes>`, com `location` e `key={location.pathname}`.
+- Cada página renderiza dentro de um `motion.div` com `initial/animate/exit` (fade + slide horizontal sutil, ~180ms, `ease-out`). Para evitar tocar em todos os pages, criar um componente `PageTransition` simples e envolver cada `element` na rota.
+- Swipe entre abas (apenas mobile, `lg:hidden`): novo hook `useSwipeNavigation` em `src/hooks/useSwipeNavigation.ts` ouvindo `touchstart`/`touchend` no `<main>`/wrapper. Threshold ~60px horizontal, ratio horizontal:vertical > 1.5, ignorar se alvo está em input/select/textarea/`[data-no-swipe]`.
+- Ordem das abas (mesma de `BottomNav`): `/ → /diario → /mensal → /banco → /config`. Swipe esquerda avança, direita volta. Direção informa o sentido da animação de saída/entrada.
+- Hook ativado no `AppRoutes`. Não interfere no desktop (early return se `window.innerWidth >= 1024`).
 
-## 2. Notificações sonoras de lembrete (PWA, baixa bateria)
+## 4. Performance e correções
+- Memoizar `dateLabel`/`timeLabel` por minuto: derivar da string `HH:MM` do `now`; já é OK pois `now` muda a cada segundo. Pequena melhoria: comparar string anterior para evitar re-render desnecessário do label de data (apenas quando muda o dia).
+- `usePunchesByDate`/`useAllPunches`/`useAdjustments`: adicionar guard `if (!user) return;` antes do `setLoading(false)` (já existe, mas garantir estados).
+- `BottomNav`: trocar `transition-colors` por `transition-all` continua leve; sem mudança significativa.
+- Lazy-load das rotas pesadas com `React.lazy` + `Suspense` (fallback spinner já existente): `DailyPage`, `MonthlyPage`, `BankPage`, `SettingsPage`. Mantém `HomePage` eager (rota inicial).
+- Remover o segundo bloco "Última batida:" duplicado no mobile (`HomePage.tsx` linhas ~309-314) — ele repete a informação já mostrada no chip novo. (Confirmar com usuário antes? — é melhoria de UI consistente com o que ele pediu antes; mantemos para não duplicar info.)
 
-### 2.1 Toggle nas Configurações
+## 5. Versionamento → `devX © 2026 - v.1.2.0`
+Atualizar:
+- `src/lib/version.ts`: `APP_VERSION = '1.2.0'`, `APP_NAME = 'devX © 2026'`.
+- `public/version.json`: `{ "version": "1.2.0" }`.
+- Verificar/atualizar referências em `index.html` (title/meta), `public/manifest.json` (name/short_name se contém versão), `README.md` se mencionar versão. Trocar qualquer "HLDEV" remanescente por "devX".
+- O `UpdateBanner` já dispara automaticamente via `useVersionCheck` ao detectar nova versão no `version.json` — usuário será notificado.
 
-Em `src/pages/SettingsPage.tsx`, nova seção "Notificações de batida":
-- Switch (ativar/desativar).
-- Ao ativar pela 1ª vez: chamar `Notification.requestPermission()`. Se negado, mostra aviso.
-- Persistência: salvar `notificationsEnabled: boolean` em `localStorage` (chave `pc:notifications`). É preferência do dispositivo, não da conta — assim cada celular controla o seu.
-- Botão "Testar notificação" para o usuário validar som/permissão.
+## Arquivos a editar
+- `src/pages/HomePage.tsx` (FAB sizes + lastPunchDelta logic + remover duplicata)
+- `src/App.tsx` (AnimatedRoutes + lazy + hook swipe)
+- `src/hooks/useSwipeNavigation.ts` (novo)
+- `src/components/PageTransition.tsx` (novo)
+- `src/lib/version.ts`
+- `public/version.json`
+- `index.html`, `public/manifest.json`, `README.md` (rename HLDEV → devX onde aplicável)
 
-### 2.2 Agendamento "leve em recursos"
-
-Criar `src/lib/punchReminder.ts` com um agendador simples baseado em `setTimeout` (1 timer ativo por vez, recalculado quando batidas/configurações mudam):
-
-```text
-calcula próxima batida esperada (mesma função calculateNextExpectedPunch
-                                   já usada na HomePage)
-       ↓
-alvo = próximaBatida - 1 minuto
-       ↓
-se alvo > agora → agenda 1 setTimeout
-       ↓
-no disparo: dispara notificação + som,
-            depois recalcula
-```
-
-Vantagens: zero polling, sem interval rodando, custo praticamente nulo.
-
-### 2.3 Hook `usePunchReminder`
-
-Novo hook chamado uma única vez no `App.tsx` (dentro do `AuthProvider`, só quando há usuário logado):
-- Lê `notificationsEnabled` do localStorage.
-- Usa `useTodayPunches()` + `useSettings()` para reagir a novas batidas / mudanças de configuração.
-- Cancela o timer anterior e agenda o novo sempre que algo muda.
-- Limpa o timer no unmount.
-
-### 2.4 Notificação + som
-
-- Notificação: tenta via Service Worker (`registration.showNotification`) para funcionar mesmo com o app em background no PWA. Fallback para `new Notification(...)`.
-- Som: pequeno `data:audio/wav;base64,...` curto (beep) tocado via `new Audio(...).play()`. Sem dependência externa, sem arquivo em `public/`.
-- Vibração leve (`navigator.vibrate([200, 100, 200])`) para dispositivos móveis.
-
-### 2.5 Suporte offline (Service Worker)
-
-O `vite-plugin-pwa` já gera SW com `autoUpdate`. Para que a notificação dispare mesmo offline, o `setTimeout` é local (JS na aba/PWA aberto). Vamos:
-- Documentar para o usuário (texto curto na seção de Configurações): "As notificações funcionam enquanto o app estiver aberto em segundo plano. No iPhone é necessário instalar como PWA."
-- Não vamos implementar Push API (exige servidor + assinatura) — fica fora do escopo desta versão.
-
-## 3. Versionamento
-
-Em `src/lib/version.ts`: bump para `1.1.3`. Sem outras alterações.
-
-## Arquivos afetados
-
-- `src/lib/version.ts` — bump
-- `src/hooks/useDB.ts` — `updatePunch` ganha 3º parâmetro opcional `type` (mudança retrocompatível)
-- `src/pages/DailyPage.tsx` — UI de edição inclui tipo
-- `src/pages/SettingsPage.tsx` — seção "Notificações"
-- `src/lib/punchReminder.ts` — **novo**: agendador + som + dispatch de notificação
-- `src/hooks/usePunchReminder.ts` — **novo**: hook que escuta batidas/configs e reagenda
-- `src/App.tsx` — chama o hook (1 linha) dentro da árvore autenticada
-
-## O que NÃO será alterado
-
-- `calculateWorkedMinutes`, `calculatePartialWorked`, `calculateNextExpectedPunch`
-- Lógica do `BankPage` (banco de horas, dias faltantes, marcar feriado)
-- `HomePage` (botão manual, exibição da próxima batida)
-- Auth, Google login, onboarding, ajuste de relógio
-- Service worker / PWA config (já está correto)
-
-Posso prosseguir?
+## Riscos / cuidados
+- Swipe não pode interferir com scroll vertical nem com inputs (date/time pickers em BankPage/DailyPage). Threshold + verificação de alvo + `[data-no-swipe]` mitigam.
+- Animação de página não deve causar flash em rotas com fetch — usar `mode="wait"` curto (180ms) e fallback de Suspense já existente.
+- Nada no layout desktop é alterado.
