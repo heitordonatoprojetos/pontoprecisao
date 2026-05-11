@@ -1,22 +1,7 @@
 import { useState } from 'react';
 import { RefreshCw, X } from 'lucide-react';
 import { useVersionCheck } from '@/hooks/useVersionCheck';
-
-async function clearAndReload() {
-  try {
-    if ('caches' in window) {
-      const keys = await caches.keys();
-      await Promise.all(keys.map(k => caches.delete(k)));
-    }
-    if ('serviceWorker' in navigator) {
-      const regs = await navigator.serviceWorker.getRegistrations();
-      await Promise.all(regs.map(r => r.unregister()));
-    }
-  } catch {/* noop */}
-  const url = new URL(window.location.href);
-  url.searchParams.set('_v', Date.now().toString());
-  window.location.replace(url.toString());
-}
+import { clearAppCacheAndReload } from '@/lib/appUpdate';
 
 export default function UpdateBanner() {
   const { remoteVersion, currentVersion } = useVersionCheck();
@@ -37,7 +22,7 @@ export default function UpdateBanner() {
           </p>
           <div className="mt-2 flex gap-2">
             <button
-              onClick={clearAndReload}
+              onClick={() => clearAppCacheAndReload(remoteVersion)}
               className="rounded-lg bg-primary px-3 py-1.5 text-xs font-semibold text-primary-foreground hover:bg-primary/90"
             >
               Atualizar agora
