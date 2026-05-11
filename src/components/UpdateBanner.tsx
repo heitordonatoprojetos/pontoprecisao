@@ -22,7 +22,7 @@ export default function UpdateBanner() {
           </p>
           <div className="mt-2 flex gap-2">
             <button
-              onClick={clearAndReload}
+              onClick={() => clearAppCacheAndReload(remoteVersion)}
               className="rounded-lg bg-primary px-3 py-1.5 text-xs font-semibold text-primary-foreground hover:bg-primary/90"
             >
               Atualizar agora
