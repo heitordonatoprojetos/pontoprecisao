@@ -60,10 +60,10 @@ export default function HomePage() {
     return next ? next.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' }) : null;
   }, [punches, settings.defaultPunches, settings.dailyHours]);
 
-  // Diferença entre a última batida real e o horário esperado dela.
-  // Para a primeira batida do dia, esperado = defaultPunches[0].
-  // Para as demais, esperado = batida anterior + (defaults[idx] - defaults[idx-1]).
-  // Positivo = atrasado (vermelho). Negativo = adiantado (verde).
+  // Delta da última batida medido pelo IMPACTO no saldo:
+  // - IN  (entrada/retorno): chegar antes = + (verde); atrasado = − (vermelho).
+  // - OUT (saída): sair depois = + (verde); sair antes = − (vermelho).
+  // Em ambos os casos, sinal positivo => batida contribui para aumentar o saldo.
   const lastPunchDelta = useMemo(() => {
     if (!lastPunch) return null;
     const defaults = settings.defaultPunches || [];
@@ -84,7 +84,9 @@ export default function HomePage() {
       const nextDef = new Date(base); nextDef.setHours(nh, nm, 0, 0);
       expectedMs = prevReal + (nextDef.getTime() - prevDef.getTime());
     }
-    return Math.round((lastPunch.timestamp - expectedMs) / 60000);
+    const diffMin = Math.round((lastPunch.timestamp - expectedMs) / 60000);
+    // sinal pelo impacto no saldo: out → diff positivo é bom; in → diff positivo é ruim.
+    return lastPunch.type === 'out' ? diffMin : -diffMin;
   }, [lastPunch, punches, settings.defaultPunches]);
 
   const formatDelta = (d: number) => (d === 0 ? '±0' : d > 0 ? `+${d}` : `${d}`);
