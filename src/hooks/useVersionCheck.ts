@@ -7,8 +7,6 @@ import {
   getPendingUpdateVersion,
 } from '@/lib/appUpdate';
 
-const CHECK_INTERVAL_MS = 60 * 1000; // 1 min
-
 async function fetchRemoteVersion(): Promise<string | null> {
   try {
     const res = await fetch(`/version.json?t=${Date.now()}`, { cache: 'no-store' });
@@ -21,17 +19,15 @@ async function fetchRemoteVersion(): Promise<string | null> {
 }
 
 /**
- * Compara a versão do bundle (APP_VERSION) com /version.json publicado.
- * Quando há nova versão:
- *  - tenta atualizar automaticamente (limpando cache/SW e recarregando);
- *  - se o auto-update já foi tentado para essa versão, expõe `remoteVersion`
- *    para que um banner manual seja mostrado (evita loop).
+ * Verifica a versão somente quando o app é aberto / volta ao primeiro plano.
+ * Sem polling. Se houver nova versão, limpa cache e recarrega automaticamente.
+ * Se o auto-update já foi tentado para a mesma versão, expõe `remoteVersion`
+ * para um banner manual (evita loops).
  */
 export function useVersionCheck() {
   const [remoteVersion, setRemoteVersion] = useState<string | null>(null);
 
   useEffect(() => {
-    // Bundle agora bate com a versão pendente: update concluído.
     if (getPendingUpdateVersion() === APP_VERSION) {
       clearPendingUpdate();
     }
@@ -40,9 +36,7 @@ export function useVersionCheck() {
 
     const check = async () => {
       const v = await fetchRemoteVersion();
-      if (cancelled) return;
-
-      if (!v) return;
+      if (cancelled || !v) return;
 
       if (v === APP_VERSION) {
         clearPendingUpdate();
@@ -50,29 +44,26 @@ export function useVersionCheck() {
         return;
       }
 
-      // Há nova versão. Tenta auto-update silencioso uma única vez por versão.
       if (canAttemptAutoUpdate(v)) {
         clearAppCacheAndReload(v);
         return;
       }
 
-      // Já tentou — mostra o banner manual.
       setRemoteVersion(v);
     };
 
+    // Executa apenas na abertura do app e quando o app volta a ficar visível
+    // (ex.: PWA reaberto, aba retomada).
     check();
-    const iv = setInterval(check, CHECK_INTERVAL_MS);
-    const onFocus = () => check();
-    window.addEventListener('focus', onFocus);
-    document.addEventListener('visibilitychange', onFocus);
-    window.addEventListener('online', onFocus);
+
+    const onVisible = () => {
+      if (document.visibilityState === 'visible') check();
+    };
+    document.addEventListener('visibilitychange', onVisible);
 
     return () => {
       cancelled = true;
-      clearInterval(iv);
-      window.removeEventListener('focus', onFocus);
-      document.removeEventListener('visibilitychange', onFocus);
-      window.removeEventListener('online', onFocus);
+      document.removeEventListener('visibilitychange', onVisible);
     };
   }, []);
 
