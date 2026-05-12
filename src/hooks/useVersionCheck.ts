@@ -31,6 +31,12 @@ export function useVersionCheck() {
   useEffect(() => {
     if (getPendingUpdateVersion() === APP_VERSION) {
       clearPendingUpdate();
+      setTimeout(() => {
+        toast.success(`Atualizado para v${APP_VERSION}`, {
+          description: 'O app foi atualizado com as últimas melhorias.',
+          duration: 5000,
+        });
+      }, 600);
     }
 
     let cancelled = false;
