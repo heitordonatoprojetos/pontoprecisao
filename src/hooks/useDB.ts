@@ -238,10 +238,13 @@ export function useSettings() {
           writeSettingsCache(next);
           return;
         }
-        }
         setLoading(false);
       });
   }, [user]);
+
+  const update = useCallback(async (s: AppSettings) => {
+    if (!user) return;
+    writeSettingsCache(s);
 
   const update = useCallback(async (s: AppSettings) => {
     if (!user) return;
