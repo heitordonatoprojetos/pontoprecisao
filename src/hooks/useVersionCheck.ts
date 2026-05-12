@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import { toast } from 'sonner';
 import { APP_VERSION } from '@/lib/version';
 import {
   canAttemptAutoUpdate,
