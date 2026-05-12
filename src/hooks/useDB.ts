@@ -245,9 +245,6 @@ export function useSettings() {
   const update = useCallback(async (s: AppSettings) => {
     if (!user) return;
     writeSettingsCache(s);
-
-  const update = useCallback(async (s: AppSettings) => {
-    if (!user) return;
     await supabase.from('user_settings').upsert({
       user_id: user.id,
       daily_hours: s.dailyHours,
