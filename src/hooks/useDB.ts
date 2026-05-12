@@ -198,9 +198,25 @@ export function usePunchesByDate(date: string) {
   return { punches, loading, refresh };
 }
 
+const SETTINGS_CACHE_KEY = 'pc:settings:v1';
+
+function readSettingsCache(): AppSettings | null {
+  try {
+    const raw = localStorage.getItem(SETTINGS_CACHE_KEY);
+    if (!raw) return null;
+    const parsed = JSON.parse(raw);
+    return { ...DEFAULT_SETTINGS, ...parsed };
+  } catch { return null; }
+}
+function writeSettingsCache(s: AppSettings) {
+  try { localStorage.setItem(SETTINGS_CACHE_KEY, JSON.stringify(s)); } catch { /* noop */ }
+}
+
 export function useSettings() {
   const { user } = useAuth();
-  const [settings, setSettingsState] = useState<AppSettings>(DEFAULT_SETTINGS);
+  // Seed from cache to evitar offset=0 antes do fetch (corrige bug em que
+  // "Bater Saída" não considerava o atraso quando clicado muito rápido).
+  const [settings, setSettingsState] = useState<AppSettings>(() => readSettingsCache() ?? DEFAULT_SETTINGS);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -212,12 +228,16 @@ export function useSettings() {
       .maybeSingle()
       .then(({ data }) => {
         if (data) {
-          setSettingsState({
+          const next: AppSettings = {
             dailyHours: data.daily_hours,
             workDays: data.work_days,
             defaultPunches: data.default_punches,
             clockOffsetMinutes: (data as { clock_offset_minutes?: number }).clock_offset_minutes ?? 0,
-          });
+          };
+          setSettingsState(next);
+          writeSettingsCache(next);
+          return;
+        }
         }
         setLoading(false);
       });
