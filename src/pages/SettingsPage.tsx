@@ -12,6 +12,7 @@ import {
   testNotification,
   clearReminder,
 } from '@/lib/punchReminder';
+import { subscribeWebPush, unsubscribeWebPush, isWebPushSupported } from '@/lib/webPush';
 
 const WEEKDAYS = ['Dom', 'Seg', 'Ter', 'Qua', 'Qui', 'Sex', 'Sáb'];
 const MIN_PUNCHES = 6;
@@ -77,6 +78,7 @@ export default function SettingsPage() {
       setNotificationsEnabled(false);
       setNotifEnabled(false);
       clearReminder();
+      await unsubscribeWebPush();
       setNotifMsg('Notificações desativadas.');
       return;
     }
@@ -88,7 +90,14 @@ export default function SettingsPage() {
     }
     setNotificationsEnabled(true);
     setNotifEnabled(true);
-    setNotifMsg('Ativado! Você receberá um aviso 1 min antes de cada batida.');
+    if (isWebPushSupported()) {
+      const ok = await subscribeWebPush();
+      setNotifMsg(ok
+        ? 'Ativado! Você receberá lembretes mesmo com o app fechado.'
+        : 'Ativado, mas o push em segundo plano falhou. Funcionará só com o app aberto.');
+    } else {
+      setNotifMsg('Ativado! (Seu navegador só envia avisos com o app aberto.)');
+    }
   };
 
   const handleTest = async () => {
@@ -211,7 +220,7 @@ export default function SettingsPage() {
               )}
               {notifMsg && <p className="mt-2 text-xs text-muted-foreground">{notifMsg}</p>}
               <p className="mt-3 text-[11px] text-muted-foreground leading-snug">
-                Funciona com o app aberto (mesmo em segundo plano ou offline). No iPhone, instale como aplicativo (Tela de Início) para receber notificações.
+                Funciona mesmo com o app fechado (push em segundo plano). No iPhone, instale como aplicativo (Tela de Início) para receber notificações.
               </p>
             </div>
           </div>
