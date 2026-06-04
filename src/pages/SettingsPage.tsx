@@ -4,7 +4,7 @@ import { useNavigate, useSearchParams } from 'react-router-dom';
 import { useSettings } from '@/hooks/useDB';
 import { useAuth } from '@/contexts/AuthContext';
 import type { AppSettings } from '@/hooks/useDB';
-import { APP_FULL_VERSION } from '@/lib/version';
+
 import {
   isNotificationsEnabled,
   setNotificationsEnabled,
