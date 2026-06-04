@@ -86,7 +86,7 @@ async function processUser(userId: string, subs: Sub[]) {
     const punchTime = new Date(next.ms).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit', timeZone: sub.tz });
     const payload = JSON.stringify({
       title: 'Ponto Certo',
-      body: `Lembrete: próxima batida às ${punchTime} (em ~1 min)`,
+      body: `Lembrete: próxima batida às ${punchTime} (em ~${leadMin} min)`,
       tag: `punch-${today}-${next.idx}`,
       url: '/',
     });
