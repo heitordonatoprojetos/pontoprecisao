@@ -1,5 +1,5 @@
 import { useState, useMemo } from 'react';
-import { Plus, Minus, Trash2, Wallet, FileDown, FileSpreadsheet, CalendarPlus, X } from 'lucide-react';
+import { Plus, Minus, Trash2, Wallet, FileDown, FileSpreadsheet, CalendarPlus, X, Palmtree } from 'lucide-react';
 import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
 import * as XLSX from 'xlsx';
