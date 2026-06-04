@@ -105,6 +105,7 @@ function AppRoutes() {
       <UpdateBanner />
       <TopNav />
       <AnimatedRoutes />
+      <AppFooter />
       <BottomNav />
       <InstallPrompt />
     </>
