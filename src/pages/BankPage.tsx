@@ -165,6 +165,33 @@ export default function BankPage() {
     setMarkSaving(false);
   };
 
+  /** Conta quantos dias úteis (workDays) existem entre start e end (inclusive). */
+  const vacationWorkDays = useMemo(() => {
+    if (!showVacation || vacStart > vacEnd) return [];
+    return eachDayBetween(vacStart, vacEnd).filter(d => {
+      const dow = new Date(d + 'T12:00:00').getDay();
+      return settings.workDays.includes(dow);
+    });
+  }, [showVacation, vacStart, vacEnd, settings.workDays]);
+
+  const submitVacation = async () => {
+    if (vacStart > vacEnd) return;
+    const days = vacationWorkDays;
+    if (days.length === 0) {
+      alert('Nenhum dia útil no período selecionado.');
+      return;
+    }
+    const startFmt = new Date(vacStart + 'T12:00:00').toLocaleDateString('pt-BR');
+    const endFmt = new Date(vacEnd + 'T12:00:00').toLocaleDateString('pt-BR');
+    if (!confirm(`Adicionar férias de ${startFmt} a ${endFmt}?\n${days.length} dia(s) útil(eis) serão abonados com ${formatMinutes(settings.dailyHours)} cada.`)) return;
+    setVacSaving(true);
+    for (const d of days) {
+      await add(settings.dailyHours, vacDesc || 'Férias', d);
+    }
+    setVacSaving(false);
+    setShowVacation(false);
+  };
+
   /** Lista de meses disponíveis (YYYY-MM) com base nas batidas + ajustes. */
   const availableMonths = useMemo(() => {
     const set = new Set<string>();
