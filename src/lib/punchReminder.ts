@@ -9,7 +9,7 @@
 import { calculateNextExpectedPunch, type Punch } from '@/hooks/useDB';
 
 const STORAGE_KEY = 'pc:notifications';
-const LEAD_MS = 60_000; // 1 min antes
+const DEFAULT_LEAD_MS = 60_000; // 1 min antes (padrão)
 
 let activeTimer: number | null = null;
 
@@ -106,6 +106,7 @@ export function scheduleReminder(
   punches: Punch[],
   defaultPunches: string[],
   clockOffsetMinutes = 0,
+  leadMinutes = 1,
 ): number | null {
   clearReminder();
   if (!isNotificationsEnabled()) return null;
@@ -114,12 +115,10 @@ export function scheduleReminder(
   const next = calculateNextExpectedPunch(punches, defaultPunches);
   if (!next) return null;
 
-  // O alvo do timer compensa o offset do relógio: se o relógio do ponto está
-  // adiantado X min, devemos disparar a notificação X min mais cedo.
-  const target = next.getTime() - LEAD_MS - clockOffsetMinutes * 60_000;
+  const leadMs = Math.max(0, leadMinutes) * 60_000 || DEFAULT_LEAD_MS;
+  const target = next.getTime() - leadMs - clockOffsetMinutes * 60_000;
   const delay = target - Date.now();
   if (delay <= 0) return null;
-  // setTimeout em browsers tem limite ~24.8 dias; aqui é sempre << 24h.
   const timeStr = next.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
   activeTimer = window.setTimeout(() => {
     activeTimer = null;

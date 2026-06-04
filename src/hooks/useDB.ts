@@ -23,6 +23,8 @@ export interface AppSettings {
   defaultPunches: string[];
   /** Ajuste do relógio em minutos. Positivo = relógio adiantado (subtrai). Negativo = atrasado (soma). */
   clockOffsetMinutes: number;
+  /** Minutos de antecedência para enviar a notificação da próxima batida. */
+  reminderLeadMinutes: number;
 }
 
 export const DEFAULT_SETTINGS: AppSettings = {
@@ -30,6 +32,7 @@ export const DEFAULT_SETTINGS: AppSettings = {
   workDays: [1, 2, 3, 4, 5],
   defaultPunches: ['08:00', '12:00', '13:00', '17:00'],
   clockOffsetMinutes: 0,
+  reminderLeadMinutes: 1,
 };
 
 /** Retorna o "agora" corrigido pelo offset do relógio configurado. */
@@ -233,6 +236,7 @@ export function useSettings() {
             workDays: data.work_days,
             defaultPunches: data.default_punches,
             clockOffsetMinutes: (data as { clock_offset_minutes?: number }).clock_offset_minutes ?? 0,
+            reminderLeadMinutes: (data as { reminder_lead_minutes?: number }).reminder_lead_minutes ?? 1,
           };
           setSettingsState(next);
           writeSettingsCache(next);
@@ -251,6 +255,7 @@ export function useSettings() {
       work_days: s.workDays,
       default_punches: s.defaultPunches,
       clock_offset_minutes: s.clockOffsetMinutes,
+      reminder_lead_minutes: s.reminderLeadMinutes,
     } as never, { onConflict: 'user_id' });
     setSettingsState(s);
   }, [user]);

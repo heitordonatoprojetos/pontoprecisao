@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { Clock, Mail, Lock, Loader2 } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
 import { lovable } from '@/integrations/lovable';
-import { APP_FULL_VERSION } from '@/lib/version';
+import { APP_VERSION } from '@/lib/version';
 
 export default function AuthPage() {
   const { signIn, signUp } = useAuth();
@@ -120,7 +120,7 @@ export default function AuthPage() {
         </form>
       </div>
 
-      <p className="mt-8 text-center text-xs text-muted-foreground">{APP_FULL_VERSION}</p>
+      <p className="mt-8 text-center text-[11px] text-muted-foreground">© 2026 - v.{APP_VERSION}</p>
       <p className="mt-1 text-center text-[11px] text-muted-foreground">Developed by devX</p>
     </div>
   );

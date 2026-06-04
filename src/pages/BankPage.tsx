@@ -1,5 +1,5 @@
 import { useState, useMemo } from 'react';
-import { Plus, Minus, Trash2, Wallet, FileDown, FileSpreadsheet, CalendarPlus, X } from 'lucide-react';
+import { Plus, Minus, Trash2, Wallet, FileDown, FileSpreadsheet, CalendarPlus, X, Palmtree } from 'lucide-react';
 import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
 import * as XLSX from 'xlsx';
@@ -52,6 +52,13 @@ export default function BankPage() {
   const [markingDate, setMarkingDate] = useState<string | null>(null);
   const [markDesc, setMarkDesc] = useState('Feriado');
   const [markSaving, setMarkSaving] = useState(false);
+
+  // Modal de férias
+  const [showVacation, setShowVacation] = useState(false);
+  const [vacStart, setVacStart] = useState(() => new Date().toISOString().split('T')[0]);
+  const [vacEnd, setVacEnd] = useState(() => new Date().toISOString().split('T')[0]);
+  const [vacDesc, setVacDesc] = useState('Férias');
+  const [vacSaving, setVacSaving] = useState(false);
 
   /** Linhas de dias (do primeiro dia com batida até hoje) */
   const dayRows = useMemo<DayRow[]>(() => {
@@ -106,9 +113,16 @@ export default function BankPage() {
     }).reverse(); // mais recente primeiro
   }, [punches, adjustments, settings]);
 
-  /** Saldo da jornada considerando dias faltantes desde a primeira batida */
+  /**
+   * Saldo da jornada considerando apenas dias ANTERIORES ao dia atual.
+   * O dia em andamento é tratado como "em aberto" para não tornar o saldo
+   * negativo antes da jornada terminar.
+   */
   const workedBalance = useMemo(() => {
-    return dayRows.reduce((sum, r) => sum + (r.worked - r.expected), 0);
+    const today = new Date().toISOString().split('T')[0];
+    return dayRows
+      .filter(r => r.date < today)
+      .reduce((sum, r) => sum + (r.worked - r.expected), 0);
   }, [dayRows]);
 
   const adjustmentTotal = useMemo(
@@ -149,6 +163,33 @@ export default function BankPage() {
     await add(settings.dailyHours, markDesc || 'Feriado', markingDate);
     setMarkingDate(null);
     setMarkSaving(false);
+  };
+
+  /** Conta quantos dias úteis (workDays) existem entre start e end (inclusive). */
+  const vacationWorkDays = useMemo(() => {
+    if (!showVacation || vacStart > vacEnd) return [];
+    return eachDayBetween(vacStart, vacEnd).filter(d => {
+      const dow = new Date(d + 'T12:00:00').getDay();
+      return settings.workDays.includes(dow);
+    });
+  }, [showVacation, vacStart, vacEnd, settings.workDays]);
+
+  const submitVacation = async () => {
+    if (vacStart > vacEnd) return;
+    const days = vacationWorkDays;
+    if (days.length === 0) {
+      alert('Nenhum dia útil no período selecionado.');
+      return;
+    }
+    const startFmt = new Date(vacStart + 'T12:00:00').toLocaleDateString('pt-BR');
+    const endFmt = new Date(vacEnd + 'T12:00:00').toLocaleDateString('pt-BR');
+    if (!confirm(`Adicionar férias de ${startFmt} a ${endFmt}?\n${days.length} dia(s) útil(eis) serão abonados com ${formatMinutes(settings.dailyHours)} cada.`)) return;
+    setVacSaving(true);
+    for (const d of days) {
+      await add(settings.dailyHours, vacDesc || 'Férias', d);
+    }
+    setVacSaving(false);
+    setShowVacation(false);
   };
 
   /** Lista de meses disponíveis (YYYY-MM) com base nas batidas + ajustes. */
@@ -261,15 +302,18 @@ export default function BankPage() {
         <p className={`text-4xl font-bold tabular-nums ${totalBalance >= 0 ? 'text-success' : 'text-destructive'}`}>
           {totalBalance > 0 ? '+' : ''}{formatMinutes(totalBalance)}
         </p>
-        <div className="mt-3 flex justify-center gap-2 text-xs text-muted-foreground">
+        <div className="mt-3 flex flex-wrap justify-center gap-2 text-xs text-muted-foreground">
           <span>Jornada: {formatMinutes(workedBalance)}</span>
           <span>•</span>
           <span>Ajustes: {formatMinutes(adjustmentTotal)}</span>
         </div>
+        <p className="mt-2 text-[10px] text-muted-foreground">
+          O dia em andamento não é contabilizado até a jornada terminar.
+        </p>
       </div>
 
       {/* Action buttons */}
-      <div className="mb-6 flex gap-3">
+      <div className="mb-3 flex gap-3">
         <button
           onClick={() => setShowForm('credit')}
           className="flex flex-1 items-center justify-center gap-2 rounded-xl bg-success py-3 text-sm font-semibold text-success-foreground"
@@ -281,6 +325,14 @@ export default function BankPage() {
           className="flex flex-1 items-center justify-center gap-2 rounded-xl bg-destructive py-3 text-sm font-semibold text-destructive-foreground"
         >
           <Minus className="h-4 w-4" /> Débito
+        </button>
+      </div>
+      <div className="mb-6">
+        <button
+          onClick={() => setShowVacation(true)}
+          className="flex w-full items-center justify-center gap-2 rounded-xl border border-primary/40 bg-primary/5 py-3 text-sm font-semibold text-primary hover:bg-primary/10"
+        >
+          <Palmtree className="h-4 w-4" /> Adicionar férias
         </button>
       </div>
 
@@ -509,6 +561,77 @@ export default function BankPage() {
                 className="flex-1 rounded-lg bg-primary py-2.5 text-sm font-semibold text-primary-foreground hover:bg-primary/90 disabled:opacity-50"
               >
                 {markSaving ? 'Salvando…' : 'Confirmar'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Modal: férias */}
+      {showVacation && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4" onClick={() => !vacSaving && setShowVacation(false)}>
+          <div className="w-full max-w-sm rounded-2xl bg-card border border-border p-5 shadow-xl" onClick={e => e.stopPropagation()}>
+            <div className="flex items-center justify-between mb-3">
+              <p className="font-semibold text-base flex items-center gap-2">
+                <Palmtree className="h-4 w-4 text-primary" /> Adicionar férias
+              </p>
+              <button onClick={() => setShowVacation(false)} className="text-muted-foreground hover:text-foreground" aria-label="Fechar">
+                <X className="h-4 w-4" />
+              </button>
+            </div>
+            <p className="text-xs text-muted-foreground mb-3">
+              Todos os dias úteis do período serão abonados automaticamente.
+            </p>
+            <div className="flex gap-2">
+              <div className="flex-1">
+                <label className="text-xs text-muted-foreground">Início</label>
+                <input
+                  type="date"
+                  value={vacStart}
+                  onChange={e => setVacStart(e.target.value)}
+                  className="mt-1 w-full rounded-lg border border-input bg-background px-3 py-2 text-sm"
+                />
+              </div>
+              <div className="flex-1">
+                <label className="text-xs text-muted-foreground">Fim</label>
+                <input
+                  type="date"
+                  value={vacEnd}
+                  onChange={e => setVacEnd(e.target.value)}
+                  min={vacStart}
+                  className="mt-1 w-full rounded-lg border border-input bg-background px-3 py-2 text-sm"
+                />
+              </div>
+            </div>
+            <div className="mt-3">
+              <label className="text-xs text-muted-foreground">Descrição</label>
+              <input
+                type="text"
+                value={vacDesc}
+                onChange={e => setVacDesc(e.target.value)}
+                placeholder="Férias"
+                className="mt-1 w-full rounded-lg border border-input bg-background px-3 py-2 text-sm"
+              />
+            </div>
+            <p className="mt-3 text-xs text-muted-foreground">
+              {vacStart > vacEnd
+                ? <span className="text-destructive">Data de fim deve ser maior ou igual ao início.</span>
+                : <>Serão criados <span className="font-semibold text-foreground">{vacationWorkDays.length}</span> abono(s) de <span className="font-semibold text-foreground">+{formatMinutes(settings.dailyHours)}</span> cada.</>}
+            </p>
+            <div className="mt-4 flex gap-2">
+              <button
+                onClick={() => setShowVacation(false)}
+                disabled={vacSaving}
+                className="flex-1 rounded-lg border border-border bg-secondary py-2.5 text-sm font-medium text-secondary-foreground hover:bg-secondary/80 disabled:opacity-50"
+              >
+                Cancelar
+              </button>
+              <button
+                onClick={submitVacation}
+                disabled={vacSaving || vacStart > vacEnd || vacationWorkDays.length === 0}
+                className="flex-1 rounded-lg bg-primary py-2.5 text-sm font-semibold text-primary-foreground hover:bg-primary/90 disabled:opacity-50"
+              >
+                {vacSaving ? 'Salvando…' : 'Confirmar'}
               </button>
             </div>
           </div>

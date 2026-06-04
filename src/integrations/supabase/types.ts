@@ -117,6 +117,7 @@ export type Database = {
           daily_hours: number
           default_punches: string[]
           id: string
+          reminder_lead_minutes: number
           updated_at: string
           user_id: string
           work_days: number[]
@@ -127,6 +128,7 @@ export type Database = {
           daily_hours?: number
           default_punches?: string[]
           id?: string
+          reminder_lead_minutes?: number
           updated_at?: string
           user_id: string
           work_days?: number[]
@@ -137,6 +139,7 @@ export type Database = {
           daily_hours?: number
           default_punches?: string[]
           id?: string
+          reminder_lead_minutes?: number
           updated_at?: string
           user_id?: string
           work_days?: number[]

@@ -14,7 +14,7 @@ const admin = createClient(
   Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!,
 );
 
-const LEAD_MIN = 1;
+const DEFAULT_LEAD_MIN = 1;
 const WINDOW_MIN = 2;
 
 interface Punch { timestamp: number; type: 'in' | 'out'; date: string }
@@ -66,6 +66,7 @@ async function processUser(userId: string, subs: Sub[]) {
   const workDays: number[] = settings.work_days || [];
   const dailyHours: number = settings.daily_hours || 0;
   const clockOffset: number = (settings as { clock_offset_minutes?: number }).clock_offset_minutes ?? 0;
+  const leadMin: number = (settings as { reminder_lead_minutes?: number }).reminder_lead_minutes ?? DEFAULT_LEAD_MIN;
 
   for (const sub of subs) {
     const today = todayStrInTz(sub.tz);
@@ -77,7 +78,7 @@ async function processUser(userId: string, subs: Sub[]) {
 
     const next = nextExpectedPunchMs(punches, defaults, today, sub.tz, dailyHours);
     if (!next) continue;
-    const target = next.ms - LEAD_MIN * 60_000 - clockOffset * 60_000;
+    const target = next.ms - leadMin * 60_000 - clockOffset * 60_000;
     const diffMin = (target - Date.now()) / 60_000;
     if (diffMin > 0 || diffMin < -WINDOW_MIN) continue;
     if (sub.last_notified_date === today && sub.last_notified_punch_idx === next.idx) continue;
@@ -85,7 +86,7 @@ async function processUser(userId: string, subs: Sub[]) {
     const punchTime = new Date(next.ms).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit', timeZone: sub.tz });
     const payload = JSON.stringify({
       title: 'Ponto Certo',
-      body: `Lembrete: próxima batida às ${punchTime} (em ~1 min)`,
+      body: `Lembrete: próxima batida às ${punchTime} (em ~${leadMin} min)`,
       tag: `punch-${today}-${next.idx}`,
       url: '/',
     });
