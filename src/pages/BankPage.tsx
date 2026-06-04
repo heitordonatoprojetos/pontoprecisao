@@ -53,6 +53,13 @@ export default function BankPage() {
   const [markDesc, setMarkDesc] = useState('Feriado');
   const [markSaving, setMarkSaving] = useState(false);
 
+  // Modal de férias
+  const [showVacation, setShowVacation] = useState(false);
+  const [vacStart, setVacStart] = useState(() => new Date().toISOString().split('T')[0]);
+  const [vacEnd, setVacEnd] = useState(() => new Date().toISOString().split('T')[0]);
+  const [vacDesc, setVacDesc] = useState('Férias');
+  const [vacSaving, setVacSaving] = useState(false);
+
   /** Linhas de dias (do primeiro dia com batida até hoje) */
   const dayRows = useMemo<DayRow[]>(() => {
     if (punches.length === 0) return [];
