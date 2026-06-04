@@ -566,6 +566,77 @@ export default function BankPage() {
           </div>
         </div>
       )}
+
+      {/* Modal: férias */}
+      {showVacation && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4" onClick={() => !vacSaving && setShowVacation(false)}>
+          <div className="w-full max-w-sm rounded-2xl bg-card border border-border p-5 shadow-xl" onClick={e => e.stopPropagation()}>
+            <div className="flex items-center justify-between mb-3">
+              <p className="font-semibold text-base flex items-center gap-2">
+                <Palmtree className="h-4 w-4 text-primary" /> Adicionar férias
+              </p>
+              <button onClick={() => setShowVacation(false)} className="text-muted-foreground hover:text-foreground" aria-label="Fechar">
+                <X className="h-4 w-4" />
+              </button>
+            </div>
+            <p className="text-xs text-muted-foreground mb-3">
+              Todos os dias úteis do período serão abonados automaticamente.
+            </p>
+            <div className="flex gap-2">
+              <div className="flex-1">
+                <label className="text-xs text-muted-foreground">Início</label>
+                <input
+                  type="date"
+                  value={vacStart}
+                  onChange={e => setVacStart(e.target.value)}
+                  className="mt-1 w-full rounded-lg border border-input bg-background px-3 py-2 text-sm"
+                />
+              </div>
+              <div className="flex-1">
+                <label className="text-xs text-muted-foreground">Fim</label>
+                <input
+                  type="date"
+                  value={vacEnd}
+                  onChange={e => setVacEnd(e.target.value)}
+                  min={vacStart}
+                  className="mt-1 w-full rounded-lg border border-input bg-background px-3 py-2 text-sm"
+                />
+              </div>
+            </div>
+            <div className="mt-3">
+              <label className="text-xs text-muted-foreground">Descrição</label>
+              <input
+                type="text"
+                value={vacDesc}
+                onChange={e => setVacDesc(e.target.value)}
+                placeholder="Férias"
+                className="mt-1 w-full rounded-lg border border-input bg-background px-3 py-2 text-sm"
+              />
+            </div>
+            <p className="mt-3 text-xs text-muted-foreground">
+              {vacStart > vacEnd
+                ? <span className="text-destructive">Data de fim deve ser maior ou igual ao início.</span>
+                : <>Serão criados <span className="font-semibold text-foreground">{vacationWorkDays.length}</span> abono(s) de <span className="font-semibold text-foreground">+{formatMinutes(settings.dailyHours)}</span> cada.</>}
+            </p>
+            <div className="mt-4 flex gap-2">
+              <button
+                onClick={() => setShowVacation(false)}
+                disabled={vacSaving}
+                className="flex-1 rounded-lg border border-border bg-secondary py-2.5 text-sm font-medium text-secondary-foreground hover:bg-secondary/80 disabled:opacity-50"
+              >
+                Cancelar
+              </button>
+              <button
+                onClick={submitVacation}
+                disabled={vacSaving || vacStart > vacEnd || vacationWorkDays.length === 0}
+                className="flex-1 rounded-lg bg-primary py-2.5 text-sm font-semibold text-primary-foreground hover:bg-primary/90 disabled:opacity-50"
+              >
+                {vacSaving ? 'Salvando…' : 'Confirmar'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
