@@ -14,7 +14,7 @@ const admin = createClient(
   Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!,
 );
 
-const LEAD_MIN = 1;
+const DEFAULT_LEAD_MIN = 1;
 const WINDOW_MIN = 2;
 
 interface Punch { timestamp: number; type: 'in' | 'out'; date: string }
