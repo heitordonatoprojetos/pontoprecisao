@@ -302,15 +302,18 @@ export default function BankPage() {
         <p className={`text-4xl font-bold tabular-nums ${totalBalance >= 0 ? 'text-success' : 'text-destructive'}`}>
           {totalBalance > 0 ? '+' : ''}{formatMinutes(totalBalance)}
         </p>
-        <div className="mt-3 flex justify-center gap-2 text-xs text-muted-foreground">
+        <div className="mt-3 flex flex-wrap justify-center gap-2 text-xs text-muted-foreground">
           <span>Jornada: {formatMinutes(workedBalance)}</span>
           <span>•</span>
           <span>Ajustes: {formatMinutes(adjustmentTotal)}</span>
         </div>
+        <p className="mt-2 text-[10px] text-muted-foreground">
+          O dia em andamento não é contabilizado até a jornada terminar.
+        </p>
       </div>
 
       {/* Action buttons */}
-      <div className="mb-6 flex gap-3">
+      <div className="mb-3 flex gap-3">
         <button
           onClick={() => setShowForm('credit')}
           className="flex flex-1 items-center justify-center gap-2 rounded-xl bg-success py-3 text-sm font-semibold text-success-foreground"
@@ -322,6 +325,14 @@ export default function BankPage() {
           className="flex flex-1 items-center justify-center gap-2 rounded-xl bg-destructive py-3 text-sm font-semibold text-destructive-foreground"
         >
           <Minus className="h-4 w-4" /> Débito
+        </button>
+      </div>
+      <div className="mb-6">
+        <button
+          onClick={() => setShowVacation(true)}
+          className="flex w-full items-center justify-center gap-2 rounded-xl border border-primary/40 bg-primary/5 py-3 text-sm font-semibold text-primary hover:bg-primary/10"
+        >
+          <Palmtree className="h-4 w-4" /> Adicionar férias
         </button>
       </div>
 
