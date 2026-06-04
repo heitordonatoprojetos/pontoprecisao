@@ -370,15 +370,6 @@ export default function SettingsPage() {
         </section>
       )}
 
-      {/* Version */}
-      {!onboarding && (
-        <>
-          <p className="mt-6 text-center text-xs text-muted-foreground">
-            {APP_FULL_VERSION}
-          </p>
-          <p className="mt-1 text-center text-[11px] text-muted-foreground">Developed by devX</p>
-        </>
-      )}
     </div>
   );
 }
