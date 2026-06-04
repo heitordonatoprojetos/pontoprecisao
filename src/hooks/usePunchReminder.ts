@@ -4,7 +4,6 @@ import { clearReminder, scheduleReminder } from '@/lib/punchReminder';
 
 /**
  * Hook leve: reagenda 1 timer sempre que batidas/configurações mudam.
- * Não cria intervals nem polling.
  */
 export function usePunchReminder() {
   const { punches } = useTodayPunches();
@@ -12,18 +11,27 @@ export function usePunchReminder() {
 
   useEffect(() => {
     if (loading) return;
-    scheduleReminder(punches, settings.defaultPunches || [], settings.clockOffsetMinutes ?? 0);
+    scheduleReminder(
+      punches,
+      settings.defaultPunches || [],
+      settings.clockOffsetMinutes ?? 0,
+      settings.reminderLeadMinutes ?? 1,
+    );
     return clearReminder;
-  }, [punches, settings.defaultPunches, settings.clockOffsetMinutes, loading]);
+  }, [punches, settings.defaultPunches, settings.clockOffsetMinutes, settings.reminderLeadMinutes, loading]);
 
-  // Reagenda quando o usuário volta ao app (timer pode ter sido suspenso).
   useEffect(() => {
     const onVis = () => {
       if (document.visibilityState === 'visible' && !loading) {
-        scheduleReminder(punches, settings.defaultPunches || [], settings.clockOffsetMinutes ?? 0);
+        scheduleReminder(
+          punches,
+          settings.defaultPunches || [],
+          settings.clockOffsetMinutes ?? 0,
+          settings.reminderLeadMinutes ?? 1,
+        );
       }
     };
     document.addEventListener('visibilitychange', onVis);
     return () => document.removeEventListener('visibilitychange', onVis);
-  }, [punches, settings.defaultPunches, settings.clockOffsetMinutes, loading]);
+  }, [punches, settings.defaultPunches, settings.clockOffsetMinutes, settings.reminderLeadMinutes, loading]);
 }
