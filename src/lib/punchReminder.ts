@@ -9,7 +9,7 @@
 import { calculateNextExpectedPunch, type Punch } from '@/hooks/useDB';
 
 const STORAGE_KEY = 'pc:notifications';
-const LEAD_MS = 60_000; // 1 min antes
+const DEFAULT_LEAD_MS = 60_000; // 1 min antes (padrão)
 
 let activeTimer: number | null = null;
 
