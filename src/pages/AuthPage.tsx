@@ -120,7 +120,7 @@ export default function AuthPage() {
         </form>
       </div>
 
-      <p className="mt-8 text-center text-xs text-muted-foreground">{APP_FULL_VERSION}</p>
+      <p className="mt-8 text-center text-[11px] text-muted-foreground">© 2026 - v.{APP_VERSION}</p>
       <p className="mt-1 text-center text-[11px] text-muted-foreground">Developed by devX</p>
     </div>
   );
