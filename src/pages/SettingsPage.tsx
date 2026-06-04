@@ -201,8 +201,31 @@ export default function SettingsPage() {
                 </button>
               </div>
               <p className="mt-1 text-xs text-muted-foreground">
-                Aviso sonoro 1 minuto antes da próxima batida (calculada com base na batida anterior).
+                Aviso sonoro antes da próxima batida (calculada com base na batida anterior).
               </p>
+
+              {/* Lead time slider */}
+              <div className="mt-4">
+                <div className="flex items-center justify-between">
+                  <label className="text-xs font-medium text-foreground">Antecedência do aviso</label>
+                  <span className="text-xs font-semibold tabular-nums text-primary">
+                    {local.reminderLeadMinutes ?? 1} min
+                  </span>
+                </div>
+                <input
+                  type="range"
+                  min={1}
+                  max={30}
+                  step={1}
+                  value={local.reminderLeadMinutes ?? 1}
+                  onChange={e => setLocal(s => ({ ...s, reminderLeadMinutes: parseInt(e.target.value) }))}
+                  className="mt-1 w-full accent-primary"
+                />
+                <p className="mt-0.5 text-[11px] text-muted-foreground">
+                  Você receberá o aviso {local.reminderLeadMinutes ?? 1} min antes do horário esperado.
+                </p>
+              </div>
+
               {notifPerm === 'unsupported' && (
                 <p className="mt-2 text-xs text-destructive">Seu navegador não suporta notificações.</p>
               )}
