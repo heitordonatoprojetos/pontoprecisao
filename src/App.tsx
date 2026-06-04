@@ -12,6 +12,7 @@ import TopNav from "@/components/TopNav";
 import UpdateBanner from "@/components/UpdateBanner";
 import InstallPrompt from "@/components/InstallPrompt";
 import PageTransition from "@/components/PageTransition";
+import AppFooter from "@/components/AppFooter";
 import HomePage from "@/pages/HomePage";
 import AuthPage from "@/pages/AuthPage";
 import NotFound from "./pages/NotFound.tsx";
