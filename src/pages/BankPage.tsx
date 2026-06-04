@@ -106,9 +106,16 @@ export default function BankPage() {
     }).reverse(); // mais recente primeiro
   }, [punches, adjustments, settings]);
 
-  /** Saldo da jornada considerando dias faltantes desde a primeira batida */
+  /**
+   * Saldo da jornada considerando apenas dias ANTERIORES ao dia atual.
+   * O dia em andamento é tratado como "em aberto" para não tornar o saldo
+   * negativo antes da jornada terminar.
+   */
   const workedBalance = useMemo(() => {
-    return dayRows.reduce((sum, r) => sum + (r.worked - r.expected), 0);
+    const today = new Date().toISOString().split('T')[0];
+    return dayRows
+      .filter(r => r.date < today)
+      .reduce((sum, r) => sum + (r.worked - r.expected), 0);
   }, [dayRows]);
 
   const adjustmentTotal = useMemo(
