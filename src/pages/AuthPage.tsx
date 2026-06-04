@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { Clock, Mail, Lock, Loader2 } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
 import { lovable } from '@/integrations/lovable';
-import { APP_FULL_VERSION } from '@/lib/version';
+import { APP_VERSION } from '@/lib/version';
 
 export default function AuthPage() {
   const { signIn, signUp } = useAuth();
