@@ -25,6 +25,8 @@ export interface AppSettings {
   clockOffsetMinutes: number;
   /** Minutos de antecedência para enviar a notificação da próxima batida. */
   reminderLeadMinutes: number;
+  /** Notificações de batida ativadas (persistido no banco, sobrevive limpar cache). */
+  notificationsEnabled: boolean;
 }
 
 export const DEFAULT_SETTINGS: AppSettings = {
@@ -33,6 +35,7 @@ export const DEFAULT_SETTINGS: AppSettings = {
   defaultPunches: ['08:00', '12:00', '13:00', '17:00'],
   clockOffsetMinutes: 0,
   reminderLeadMinutes: 1,
+  notificationsEnabled: false,
 };
 
 /** Retorna o "agora" corrigido pelo offset do relógio configurado. */
