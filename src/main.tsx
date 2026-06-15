@@ -25,4 +25,6 @@ if (!isPreviewHost && !isInIframe) {
   bootRefreshOnce();
 }
 
+installOfflineSync();
+
 createRoot(document.getElementById("root")!).render(<App />);
