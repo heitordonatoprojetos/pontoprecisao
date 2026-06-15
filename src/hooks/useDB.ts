@@ -165,6 +165,7 @@ export function useTodayPunches() {
   }, [user]);
 
   useEffect(() => { refresh(); }, [refresh]);
+  useEffect(() => onReconnect(() => { refresh(); }), [refresh]);
 
   const punch = useCallback(async (offsetMinutes = 0) => {
     if (!user) return;
