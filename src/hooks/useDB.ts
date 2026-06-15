@@ -1,6 +1,8 @@
 import { useState, useEffect, useCallback } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
+import { setNotificationsEnabled as setNotifLocal } from '@/lib/punchReminder';
+import { onReconnect } from '@/lib/offlineSync';
 
 export interface Punch {
   id: string;
@@ -25,6 +27,8 @@ export interface AppSettings {
   clockOffsetMinutes: number;
   /** Minutos de antecedência para enviar a notificação da próxima batida. */
   reminderLeadMinutes: number;
+  /** Notificações de batida ativadas (persistido no banco, sobrevive limpar cache). */
+  notificationsEnabled: boolean;
 }
 
 export const DEFAULT_SETTINGS: AppSettings = {
@@ -33,6 +37,7 @@ export const DEFAULT_SETTINGS: AppSettings = {
   defaultPunches: ['08:00', '12:00', '13:00', '17:00'],
   clockOffsetMinutes: 0,
   reminderLeadMinutes: 1,
+  notificationsEnabled: false,
 };
 
 /** Retorna o "agora" corrigido pelo offset do relógio configurado. */
@@ -160,6 +165,7 @@ export function useTodayPunches() {
   }, [user]);
 
   useEffect(() => { refresh(); }, [refresh]);
+  useEffect(() => onReconnect(() => { refresh(); }), [refresh]);
 
   const punch = useCallback(async (offsetMinutes = 0) => {
     if (!user) return;
@@ -197,6 +203,7 @@ export function usePunchesByDate(date: string) {
   }, [date, user]);
 
   useEffect(() => { refresh(); }, [refresh]);
+  useEffect(() => onReconnect(() => { refresh(); }), [refresh]);
 
   return { punches, loading, refresh };
 }
@@ -237,18 +244,23 @@ export function useSettings() {
             defaultPunches: data.default_punches,
             clockOffsetMinutes: (data as { clock_offset_minutes?: number }).clock_offset_minutes ?? 0,
             reminderLeadMinutes: (data as { reminder_lead_minutes?: number }).reminder_lead_minutes ?? 1,
+            notificationsEnabled: (data as { notifications_enabled?: boolean }).notifications_enabled ?? false,
           };
           setSettingsState(next);
           writeSettingsCache(next);
+          setNotifLocal(next.notificationsEnabled);
+          setLoading(false);
           return;
         }
         setLoading(false);
       });
   }, [user]);
 
+
   const update = useCallback(async (s: AppSettings) => {
     if (!user) return;
     writeSettingsCache(s);
+    setNotifLocal(s.notificationsEnabled);
     await supabase.from('user_settings').upsert({
       user_id: user.id,
       daily_hours: s.dailyHours,
@@ -256,6 +268,7 @@ export function useSettings() {
       default_punches: s.defaultPunches,
       clock_offset_minutes: s.clockOffsetMinutes,
       reminder_lead_minutes: s.reminderLeadMinutes,
+      notifications_enabled: s.notificationsEnabled,
     } as never, { onConflict: 'user_id' });
     setSettingsState(s);
   }, [user]);
@@ -281,6 +294,7 @@ export function useAllPunches() {
   }, [user]);
 
   useEffect(() => { refresh(); }, [refresh]);
+  useEffect(() => onReconnect(() => { refresh(); }), [refresh]);
 
   return { punches, loading, refresh };
 }
@@ -309,6 +323,7 @@ export function useAdjustments() {
   }, [user]);
 
   useEffect(() => { refresh(); }, [refresh]);
+  useEffect(() => onReconnect(() => { refresh(); }), [refresh]);
 
   const add = useCallback(async (minutes: number, description: string, date?: string) => {
     if (!user) return;

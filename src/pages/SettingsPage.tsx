@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useState } from 'react';
 import { Save, Plus, Trash2, Clock, LogOut, AlertCircle, RefreshCw, Bell, BellOff } from 'lucide-react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { useSettings } from '@/hooks/useDB';
@@ -6,8 +6,6 @@ import { useAuth } from '@/contexts/AuthContext';
 import type { AppSettings } from '@/hooks/useDB';
 
 import {
-  isNotificationsEnabled,
-  setNotificationsEnabled,
   requestNotificationPermission,
   testNotification,
   clearReminder,
@@ -63,20 +61,19 @@ export default function SettingsPage() {
     setSynced(true);
   }
 
-  // Notifications local state (per-device)
-  const [notifEnabled, setNotifEnabled] = useState<boolean>(isNotificationsEnabled());
+  // Notifications: source of truth is DB (local.notificationsEnabled). Persists across cache clears.
+  const notifEnabled = !!local.notificationsEnabled;
   const [notifPerm, setNotifPerm] = useState<NotificationPermission | 'unsupported'>(
     typeof Notification === 'undefined' ? 'unsupported' : Notification.permission,
   );
   const [notifTesting, setNotifTesting] = useState(false);
   const [notifMsg, setNotifMsg] = useState<string | null>(null);
 
-  useEffect(() => { setNotifEnabled(isNotificationsEnabled()); }, []);
-
   const toggleNotif = async () => {
     if (notifEnabled) {
-      setNotificationsEnabled(false);
-      setNotifEnabled(false);
+      const next = { ...local, notificationsEnabled: false };
+      setLocal(next);
+      await update(next);
       clearReminder();
       await unsubscribeWebPush();
       setNotifMsg('Notificações desativadas.');
@@ -88,8 +85,9 @@ export default function SettingsPage() {
       setNotifMsg('Permissão negada. Habilite nas configurações do navegador/celular.');
       return;
     }
-    setNotificationsEnabled(true);
-    setNotifEnabled(true);
+    const next = { ...local, notificationsEnabled: true };
+    setLocal(next);
+    await update(next);
     if (isWebPushSupported()) {
       const ok = await subscribeWebPush();
       setNotifMsg(ok

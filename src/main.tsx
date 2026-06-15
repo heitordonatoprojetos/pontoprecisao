@@ -2,6 +2,7 @@ import { createRoot } from "react-dom/client";
 import App from "./App.tsx";
 import "./index.css";
 import { bootRefreshOnce } from "./lib/bootRefresh";
+import { installOfflineSync } from "./lib/offlineSync";
 
 // Prevent service worker registration in iframe/preview contexts
 const isInIframe = (() => {
@@ -23,5 +24,7 @@ if (isPreviewHost || isInIframe) {
 if (!isPreviewHost && !isInIframe) {
   bootRefreshOnce();
 }
+
+installOfflineSync();
 
 createRoot(document.getElementById("root")!).render(<App />);
