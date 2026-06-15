@@ -294,6 +294,7 @@ export function useAllPunches() {
   }, [user]);
 
   useEffect(() => { refresh(); }, [refresh]);
+  useEffect(() => onReconnect(() => { refresh(); }), [refresh]);
 
   return { punches, loading, refresh };
 }
