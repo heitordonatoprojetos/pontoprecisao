@@ -240,6 +240,7 @@ export function useSettings() {
             defaultPunches: data.default_punches,
             clockOffsetMinutes: (data as { clock_offset_minutes?: number }).clock_offset_minutes ?? 0,
             reminderLeadMinutes: (data as { reminder_lead_minutes?: number }).reminder_lead_minutes ?? 1,
+            notificationsEnabled: (data as { notifications_enabled?: boolean }).notifications_enabled ?? false,
           };
           setSettingsState(next);
           writeSettingsCache(next);
@@ -259,6 +260,7 @@ export function useSettings() {
       default_punches: s.defaultPunches,
       clock_offset_minutes: s.clockOffsetMinutes,
       reminder_lead_minutes: s.reminderLeadMinutes,
+      notifications_enabled: s.notificationsEnabled,
     } as never, { onConflict: 'user_id' });
     setSettingsState(s);
   }, [user]);
