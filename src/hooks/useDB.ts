@@ -203,6 +203,7 @@ export function usePunchesByDate(date: string) {
   }, [date, user]);
 
   useEffect(() => { refresh(); }, [refresh]);
+  useEffect(() => onReconnect(() => { refresh(); }), [refresh]);
 
   return { punches, loading, refresh };
 }
