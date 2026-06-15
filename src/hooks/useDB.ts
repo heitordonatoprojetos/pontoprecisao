@@ -245,8 +245,18 @@ export function useSettings() {
           };
           setSettingsState(next);
           writeSettingsCache(next);
+          setNotifLocal(next.notificationsEnabled);
+          setLoading(false);
           return;
         }
+        setLoading(false);
+      });
+  }, [user]);
+
+  const update = useCallback(async (s: AppSettings) => {
+    if (!user) return;
+    writeSettingsCache(s);
+    setNotifLocal(s.notificationsEnabled);
         setLoading(false);
       });
   }, [user]);
