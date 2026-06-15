@@ -6,8 +6,6 @@ import { useAuth } from '@/contexts/AuthContext';
 import type { AppSettings } from '@/hooks/useDB';
 
 import {
-  isNotificationsEnabled,
-  setNotificationsEnabled,
   requestNotificationPermission,
   testNotification,
   clearReminder,
