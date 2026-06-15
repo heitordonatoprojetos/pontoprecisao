@@ -323,6 +323,7 @@ export function useAdjustments() {
   }, [user]);
 
   useEffect(() => { refresh(); }, [refresh]);
+  useEffect(() => onReconnect(() => { refresh(); }), [refresh]);
 
   const add = useCallback(async (minutes: number, description: string, date?: string) => {
     if (!user) return;
