@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useState } from 'react';
 import { Save, Plus, Trash2, Clock, LogOut, AlertCircle, RefreshCw, Bell, BellOff } from 'lucide-react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { useSettings } from '@/hooks/useDB';
