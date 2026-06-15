@@ -253,13 +253,6 @@ export function useSettings() {
       });
   }, [user]);
 
-  const update = useCallback(async (s: AppSettings) => {
-    if (!user) return;
-    writeSettingsCache(s);
-    setNotifLocal(s.notificationsEnabled);
-        setLoading(false);
-      });
-  }, [user]);
 
   const update = useCallback(async (s: AppSettings) => {
     if (!user) return;
