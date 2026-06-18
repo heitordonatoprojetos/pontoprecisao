@@ -41,10 +41,14 @@ Deno.serve(async (req) => {
       tz: body.tz || 'America/Sao_Paulo',
     };
     const { error } = await supabase.from('push_subscriptions').upsert(row, { onConflict: 'endpoint' });
-    if (error) return json({ error: error.message }, 500);
+    if (error) {
+      console.error('push_subscriptions upsert failed:', error);
+      return json({ error: 'Internal server error' }, 500);
+    }
     return json({ ok: true });
   } catch (e) {
-    return json({ error: (e as Error).message }, 500);
+    console.error('push-subscribe unhandled error:', e);
+    return json({ error: 'Internal server error' }, 500);
   }
 });
 
