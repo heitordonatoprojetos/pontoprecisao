@@ -106,6 +106,19 @@ async function processUser(userId: string, subs: Sub[]) {
 
 Deno.serve(async (req) => {
   if (req.method === 'OPTIONS') return new Response('ok', { headers: corsHeaders });
+  // Require shared CRON_SECRET to prevent unauthenticated abuse.
+  const cronSecret = Deno.env.get('CRON_SECRET');
+  if (!cronSecret) {
+    console.error('CRON_SECRET not configured');
+    return new Response('Service unavailable', { status: 503, headers: corsHeaders });
+  }
+  const auth = req.headers.get('Authorization') || req.headers.get('authorization') || '';
+  const expected = `Bearer ${cronSecret}`;
+  const a = new TextEncoder().encode(auth);
+  const b = new TextEncoder().encode(expected);
+  let ok = a.length === b.length;
+  for (let i = 0; i < Math.min(a.length, b.length); i++) ok = (a[i] === b[i]) && ok;
+  if (!ok) return new Response('Unauthorized', { status: 401, headers: corsHeaders });
   try {
     const { data: allSubs, error } = await admin.from('push_subscriptions').select('*');
     if (error) throw error;
@@ -115,8 +128,9 @@ Deno.serve(async (req) => {
       arr.push(s); byUser.set(s.user_id, arr);
     }
     for (const [uid, subs] of byUser) await processUser(uid, subs);
-    return new Response(JSON.stringify({ ok: true, users: byUser.size }), { headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
+    return new Response(JSON.stringify({ ok: true }), { headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
   } catch (e) {
-    return new Response(JSON.stringify({ error: (e as Error).message }), { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
+    console.error('send-reminders unhandled error:', e);
+    return new Response(JSON.stringify({ error: 'Internal server error' }), { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
   }
 });
