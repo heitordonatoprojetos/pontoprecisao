@@ -90,8 +90,11 @@ export default function BankPage() {
       const dow = new Date(date + 'T12:00:00').getDay();
       const isWorkDay = settings.workDays.includes(dow);
       const worked = hasPunches ? calculateWorkedMinutes(dayPunches) : 0;
-      const expected = isWorkDay ? settings.dailyHours : 0;
       const dayAdj = adjByDate[date] || [];
+      // Marcador de dia abonado (férias/feriado/folga): adjustment com minutes === 0.
+      // Esses dias "zeram" o saldo do dia — não esperam jornada nem somam ajuste.
+      const isDayOff = dayAdj.some(a => a.minutes === 0);
+      const expected = isDayOff ? 0 : (isWorkDay ? settings.dailyHours : 0);
       const adjMinutes = dayAdj.reduce((s, a) => s + a.minutes, 0);
       const punchTimes = dayPunches.map(p =>
         new Date(p.timestamp).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' }),
@@ -101,7 +104,7 @@ export default function BankPage() {
         date,
         dateFmt: new Date(date + 'T12:00:00').toLocaleDateString('pt-BR'),
         dow,
-        isWorkDay,
+        isWorkDay: isWorkDay && !isDayOff,
         hasPunches,
         punchTimes,
         worked,
@@ -160,7 +163,9 @@ export default function BankPage() {
   const submitMark = async () => {
     if (!markingDate) return;
     setMarkSaving(true);
-    await add(settings.dailyHours, markDesc || 'Feriado', markingDate);
+    // Marcado como dia abonado (feriado/folga): minutes=0 zera o saldo do dia
+    // sem alterar o banco de horas.
+    await add(0, markDesc || 'Feriado', markingDate);
     setMarkingDate(null);
     setMarkSaving(false);
   };
@@ -183,10 +188,11 @@ export default function BankPage() {
     }
     const startFmt = new Date(vacStart + 'T12:00:00').toLocaleDateString('pt-BR');
     const endFmt = new Date(vacEnd + 'T12:00:00').toLocaleDateString('pt-BR');
-    if (!confirm(`Adicionar férias de ${startFmt} a ${endFmt}?\n${days.length} dia(s) útil(eis) serão abonados com ${formatMinutes(settings.dailyHours)} cada.`)) return;
+    if (!confirm(`Adicionar férias de ${startFmt} a ${endFmt}?\n${days.length} dia(s) útil(eis) serão zerados (sem alterar o banco de horas).`)) return;
     setVacSaving(true);
     for (const d of days) {
-      await add(settings.dailyHours, vacDesc || 'Férias', d);
+      // minutes=0: zera o saldo dos dias de férias sem afetar o banco.
+      await add(0, vacDesc || 'Férias', d);
     }
     setVacSaving(false);
     setShowVacation(false);
@@ -545,7 +551,7 @@ export default function BankPage() {
               autoFocus
             />
             <p className="mt-2 text-xs text-muted-foreground">
-              Será adicionado um abono de <span className="font-semibold text-foreground">+{formatMinutes(settings.dailyHours)}</span> neste dia.
+              Este dia será marcado como <span className="font-semibold text-foreground">abonado</span> e seu saldo ficará em <span className="font-semibold text-foreground">00:00</span> (sem alterar o banco de horas).
             </p>
             <div className="mt-4 flex gap-2">
               <button
@@ -616,7 +622,7 @@ export default function BankPage() {
             <p className="mt-3 text-xs text-muted-foreground">
               {vacStart > vacEnd
                 ? <span className="text-destructive">Data de fim deve ser maior ou igual ao início.</span>
-                : <>Serão criados <span className="font-semibold text-foreground">{vacationWorkDays.length}</span> abono(s) de <span className="font-semibold text-foreground">+{formatMinutes(settings.dailyHours)}</span> cada.</>}
+                : <><span className="font-semibold text-foreground">{vacationWorkDays.length}</span> dia(s) útil(eis) serão marcados como abonados — saldo de cada dia ficará em <span className="font-semibold text-foreground">00:00</span> sem alterar o banco.</>}
             </p>
             <div className="mt-4 flex gap-2">
               <button
