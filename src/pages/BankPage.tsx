@@ -90,8 +90,11 @@ export default function BankPage() {
       const dow = new Date(date + 'T12:00:00').getDay();
       const isWorkDay = settings.workDays.includes(dow);
       const worked = hasPunches ? calculateWorkedMinutes(dayPunches) : 0;
-      const expected = isWorkDay ? settings.dailyHours : 0;
       const dayAdj = adjByDate[date] || [];
+      // Marcador de dia abonado (férias/feriado/folga): adjustment com minutes === 0.
+      // Esses dias "zeram" o saldo do dia — não esperam jornada nem somam ajuste.
+      const isDayOff = dayAdj.some(a => a.minutes === 0);
+      const expected = isDayOff ? 0 : (isWorkDay ? settings.dailyHours : 0);
       const adjMinutes = dayAdj.reduce((s, a) => s + a.minutes, 0);
       const punchTimes = dayPunches.map(p =>
         new Date(p.timestamp).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' }),
@@ -101,7 +104,7 @@ export default function BankPage() {
         date,
         dateFmt: new Date(date + 'T12:00:00').toLocaleDateString('pt-BR'),
         dow,
-        isWorkDay,
+        isWorkDay: isWorkDay && !isDayOff,
         hasPunches,
         punchTimes,
         worked,
