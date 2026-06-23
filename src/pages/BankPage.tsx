@@ -551,7 +551,7 @@ export default function BankPage() {
               autoFocus
             />
             <p className="mt-2 text-xs text-muted-foreground">
-              Será adicionado um abono de <span className="font-semibold text-foreground">+{formatMinutes(settings.dailyHours)}</span> neste dia.
+              Este dia será marcado como <span className="font-semibold text-foreground">abonado</span> e seu saldo ficará em <span className="font-semibold text-foreground">00:00</span> (sem alterar o banco de horas).
             </p>
             <div className="mt-4 flex gap-2">
               <button
