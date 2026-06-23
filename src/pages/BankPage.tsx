@@ -622,7 +622,7 @@ export default function BankPage() {
             <p className="mt-3 text-xs text-muted-foreground">
               {vacStart > vacEnd
                 ? <span className="text-destructive">Data de fim deve ser maior ou igual ao início.</span>
-                : <>Serão criados <span className="font-semibold text-foreground">{vacationWorkDays.length}</span> abono(s) de <span className="font-semibold text-foreground">+{formatMinutes(settings.dailyHours)}</span> cada.</>}
+                : <><span className="font-semibold text-foreground">{vacationWorkDays.length}</span> dia(s) útil(eis) serão marcados como abonados — saldo de cada dia ficará em <span className="font-semibold text-foreground">00:00</span> sem alterar o banco.</>}
             </p>
             <div className="mt-4 flex gap-2">
               <button
