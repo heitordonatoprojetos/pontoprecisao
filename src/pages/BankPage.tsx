@@ -163,7 +163,9 @@ export default function BankPage() {
   const submitMark = async () => {
     if (!markingDate) return;
     setMarkSaving(true);
-    await add(settings.dailyHours, markDesc || 'Feriado', markingDate);
+    // Marcado como dia abonado (feriado/folga): minutes=0 zera o saldo do dia
+    // sem alterar o banco de horas.
+    await add(0, markDesc || 'Feriado', markingDate);
     setMarkingDate(null);
     setMarkSaving(false);
   };
@@ -186,10 +188,11 @@ export default function BankPage() {
     }
     const startFmt = new Date(vacStart + 'T12:00:00').toLocaleDateString('pt-BR');
     const endFmt = new Date(vacEnd + 'T12:00:00').toLocaleDateString('pt-BR');
-    if (!confirm(`Adicionar férias de ${startFmt} a ${endFmt}?\n${days.length} dia(s) útil(eis) serão abonados com ${formatMinutes(settings.dailyHours)} cada.`)) return;
+    if (!confirm(`Adicionar férias de ${startFmt} a ${endFmt}?\n${days.length} dia(s) útil(eis) serão zerados (sem alterar o banco de horas).`)) return;
     setVacSaving(true);
     for (const d of days) {
-      await add(settings.dailyHours, vacDesc || 'Férias', d);
+      // minutes=0: zera o saldo dos dias de férias sem afetar o banco.
+      await add(0, vacDesc || 'Férias', d);
     }
     setVacSaving(false);
     setShowVacation(false);
