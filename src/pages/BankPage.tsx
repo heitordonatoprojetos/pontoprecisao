@@ -89,12 +89,14 @@ export default function BankPage() {
       const hasPunches = dayPunches.length > 0;
       const dow = new Date(date + 'T12:00:00').getDay();
       const isWorkDay = settings.workDays.includes(dow);
-      const worked = hasPunches ? calculateWorkedMinutes(dayPunches) : 0;
+      const workedRaw = hasPunches ? calculateWorkedMinutes(dayPunches) : 0;
       const dayAdj = adjByDate[date] || [];
       // Marcador de dia abonado (férias/feriado/folga): adjustment com minutes === 0.
-      // Esses dias "zeram" o saldo do dia — não esperam jornada nem somam ajuste.
+      // Esses dias "zeram" o saldo do dia — não esperam jornada, não contam batidas
+      // e não somam ajuste. Ficam sempre em 00:00 sem alterar o banco.
       const isDayOff = dayAdj.some(a => a.minutes === 0);
       const expected = isDayOff ? 0 : (isWorkDay ? settings.dailyHours : 0);
+      const worked = isDayOff ? 0 : workedRaw;
       const adjMinutes = dayAdj.reduce((s, a) => s + a.minutes, 0);
       const punchTimes = dayPunches.map(p =>
         new Date(p.timestamp).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' }),
@@ -111,7 +113,7 @@ export default function BankPage() {
         expected,
         adjMinutes,
         adjDescriptions,
-        balance: worked - expected + adjMinutes,
+        balance: isDayOff ? 0 : (worked - expected + adjMinutes),
       };
     }).reverse(); // mais recente primeiro
   }, [punches, adjustments, settings]);
@@ -119,13 +121,14 @@ export default function BankPage() {
   /**
    * Saldo da jornada considerando apenas dias ANTERIORES ao dia atual.
    * O dia em andamento é tratado como "em aberto" para não tornar o saldo
-   * negativo antes da jornada terminar.
+   * negativo antes da jornada terminar. Dias abonados (férias/feriado)
+   * contribuem 0 — não afetam o banco de horas.
    */
   const workedBalance = useMemo(() => {
     const today = new Date().toISOString().split('T')[0];
     return dayRows
       .filter(r => r.date < today)
-      .reduce((sum, r) => sum + (r.worked - r.expected), 0);
+      .reduce((sum, r) => sum + (r.balance - r.adjMinutes), 0);
   }, [dayRows]);
 
   const adjustmentTotal = useMemo(
