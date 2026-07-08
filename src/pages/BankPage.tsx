@@ -267,26 +267,139 @@ export default function BankPage() {
   const exportXLSX = (months: string[]) => {
     const rows = filteredRows(months);
     const adj = filteredAdj(months);
+    const dowNames = ['Domingo', 'Segunda', 'Terça', 'Quarta', 'Quinta', 'Sexta', 'Sábado'];
+    const monthsSet = months.length === 0 ? null : new Set(months);
+    const filteredPunches = monthsSet
+      ? punches.filter(p => monthsSet.has(p.date.slice(0, 7)))
+      : punches;
+
+    const classifyDay = (r: DayRow): string => {
+      if (r.adjDescriptions.length === 0) return r.isWorkDay ? 'Útil' : 'Não útil';
+      const descs = r.adjDescriptions.join(' ').toLowerCase();
+      const hasZero = r.adjMinutes === 0 && r.adjDescriptions.length > 0;
+      if (hasZero) {
+        if (descs.includes('féria') || descs.includes('feria')) return 'Férias';
+        if (descs.includes('feriado')) return 'Feriado';
+        return 'Abonado';
+      }
+      return r.isWorkDay ? 'Útil (c/ ajuste)' : 'Não útil (c/ ajuste)';
+    };
+
     const wb = XLSX.utils.book_new();
-    const ws = XLSX.utils.json_to_sheet(rows.map(r => ({
-      Data: r.dateFmt,
-      Batidas: r.hasPunches ? r.punchTimes.join(' | ') : '',
-      Ajuste: r.adjDescriptions.join(', '),
-      Trabalhado: formatMinutes(r.worked),
-      Esperado: formatMinutes(r.expected),
-      MinutosAjuste: r.adjMinutes,
-      Saldo: (r.balance > 0 ? '+' : '') + formatMinutes(r.balance),
-    })));
-    XLSX.utils.book_append_sheet(wb, ws, 'Dias');
+
+    // 1) Resumo
+    const totalPeriodo = rows.reduce((s, r) => s + r.balance, 0);
+    const totalTrabalhado = rows.reduce((s, r) => s + r.worked, 0);
+    const totalEsperado = rows.reduce((s, r) => s + r.expected, 0);
+    const totalAjustes = rows.reduce((s, r) => s + r.adjMinutes, 0);
+    const wsResumo = XLSX.utils.aoa_to_sheet([
+      ['Banco de Horas — Relatório'],
+      ['Gerado em', new Date().toLocaleString('pt-BR')],
+      ['Período', months.length === 0 ? 'Todos' : months.map(monthLabel).join(', ')],
+      [],
+      ['Dias no período', rows.length],
+      ['Total trabalhado', formatMinutes(totalTrabalhado), totalTrabalhado],
+      ['Total esperado', formatMinutes(totalEsperado), totalEsperado],
+      ['Total ajustes', (totalAjustes > 0 ? '+' : '') + formatMinutes(totalAjustes), totalAjustes],
+      ['Saldo do período', (totalPeriodo > 0 ? '+' : '') + formatMinutes(totalPeriodo), totalPeriodo],
+    ]);
+    XLSX.utils.book_append_sheet(wb, wsResumo, 'Resumo');
+
+    // 2) Dias — detalhado com até 8 batidas + classificação
+    const maxPunches = Math.max(4, ...rows.map(r => r.punchTimes.length));
+    const daysDetailed = rows.map(r => {
+      const base: Record<string, string | number> = {
+        Data: r.date,
+        DataFmt: r.dateFmt,
+        DiaSemana: dowNames[r.dow],
+        Tipo: classifyDay(r),
+        Trabalhado: formatMinutes(r.worked),
+        MinTrabalhado: r.worked,
+        Esperado: formatMinutes(r.expected),
+        MinEsperado: r.expected,
+        Ajuste: (r.adjMinutes > 0 ? '+' : '') + formatMinutes(r.adjMinutes),
+        MinAjuste: r.adjMinutes,
+        Saldo: (r.balance > 0 ? '+' : '') + formatMinutes(r.balance),
+        MinSaldo: r.balance,
+        DescrAjuste: r.adjDescriptions.join(' | '),
+        QtdBatidas: r.punchTimes.length,
+      };
+      for (let i = 0; i < maxPunches; i++) {
+        base[`B${i + 1}`] = r.punchTimes[i] ?? '';
+      }
+      return base;
+    });
+    const wsDias = XLSX.utils.json_to_sheet(daysDetailed);
+    XLSX.utils.book_append_sheet(wb, wsDias, 'Dias');
+
+    // 3) Batidas (raw, auditoria)
+    const wsPunches = XLSX.utils.json_to_sheet(
+      [...filteredPunches]
+        .sort((a, b) => a.timestamp - b.timestamp)
+        .map(p => {
+          const d = new Date(p.timestamp);
+          return {
+            Data: p.date,
+            DataFmt: new Date(p.date + 'T12:00:00').toLocaleDateString('pt-BR'),
+            DiaSemana: dowNames[new Date(p.date + 'T12:00:00').getDay()],
+            Hora: d.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit', second: '2-digit' }),
+            Tipo: p.type === 'in' ? 'Entrada' : 'Saída',
+            Timestamp: p.timestamp,
+            ISO: d.toISOString(),
+            ID: p.id,
+          };
+        }),
+    );
+    XLSX.utils.book_append_sheet(wb, wsPunches, 'Batidas');
+
+    // 4) Ajustes (raw)
     if (adj.length > 0) {
-      const wsAdj = XLSX.utils.json_to_sheet(adj.map(a => ({
-        Data: new Date(a.date + 'T12:00:00').toLocaleDateString('pt-BR'),
-        Descrição: a.description,
-        Minutos: a.minutes,
-        Formatado: (a.minutes > 0 ? '+' : '') + formatMinutes(a.minutes),
-      })));
+      const wsAdj = XLSX.utils.json_to_sheet(
+        [...adj]
+          .sort((a, b) => a.date.localeCompare(b.date))
+          .map(a => ({
+            Data: a.date,
+            DataFmt: new Date(a.date + 'T12:00:00').toLocaleDateString('pt-BR'),
+            DiaSemana: dowNames[new Date(a.date + 'T12:00:00').getDay()],
+            Descrição: a.description,
+            Categoria: a.minutes === 0
+              ? (a.description.toLowerCase().includes('féria') || a.description.toLowerCase().includes('feria')
+                  ? 'Férias'
+                  : a.description.toLowerCase().includes('feriado') ? 'Feriado' : 'Abono (zerado)')
+              : (a.minutes > 0 ? 'Crédito' : 'Débito'),
+            Minutos: a.minutes,
+            Formatado: (a.minutes > 0 ? '+' : '') + formatMinutes(a.minutes),
+            CriadoEm: new Date(a.createdAt).toLocaleString('pt-BR'),
+            ID: a.id,
+          })),
+      );
       XLSX.utils.book_append_sheet(wb, wsAdj, 'Ajustes');
     }
+
+    // 5) Feriados/Férias/Abonos (apenas os que zeram o dia)
+    const holidays = adj.filter(a => a.minutes === 0);
+    if (holidays.length > 0) {
+      const wsHol = XLSX.utils.json_to_sheet(
+        [...holidays]
+          .sort((a, b) => a.date.localeCompare(b.date))
+          .map(a => {
+            const desc = a.description.toLowerCase();
+            const tipo = desc.includes('féria') || desc.includes('feria')
+              ? 'Férias'
+              : desc.includes('feriado') ? 'Feriado' : 'Abono';
+            return {
+              Data: a.date,
+              DataFmt: new Date(a.date + 'T12:00:00').toLocaleDateString('pt-BR'),
+              DiaSemana: dowNames[new Date(a.date + 'T12:00:00').getDay()],
+              Tipo: tipo,
+              Descrição: a.description,
+              ID: a.id,
+            };
+          }),
+      );
+      XLSX.utils.book_append_sheet(wb, wsHol, 'Feriados-Abonos');
+    }
+
     XLSX.writeFile(wb, `banco-horas-${new Date().toISOString().split('T')[0]}.xlsx`);
   };
 
